@@ -1,0 +1,197 @@
+# Qt-specific files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+Makefile*
+*build-*
+*.qm
+.qmake.cache
+.qmake.stash
+
+# Qt Creator
+*.autosave
+*.config
+*.creator
+*.creator.*
+*.files
+*.includes
+*.cflags
+*.cxxflags
+
+# Build directories
+build/
+build-*/
+debug/
+release/
+Debug/
+Release/
+.build/
+cmake-build-*/
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# C++ objects and libs
+*.slo
+*.lo
+*.o
+*.a
+*.la
+*.lai
+*.so
+*.so.*
+*.dll
+*.dylib
+*.exe
+*.out
+*.app
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+anvil
+Anvil
+
+# Linux specific
+*.core
+core
+*.pid
+*.seed
+*.pid.lock
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+# IDE - CLion
+.idea/
+*.iml
+*.iws
+
+# IDE - Eclipse
+.project
+.cproject
+.settings/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.*.swp
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database files (if using local SQLite for settings)
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration files with sensitive data
+config/secrets.json
+.env
+.env.local
+
+# Package manager
+conan.lock
+conanbuildinfo.*
+conaninfo.txt
+
+# Dependencies
+vendor/
+third-party/
+external/
+
+# Generated documentation
+docs/html/
+docs/latex/
+docs/build/
+doxygen/
+
+# Test coverage
+*.gcov
+*.gcno
+*.gcda
+coverage/
+*.coverage
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Distribution / packaging
+dist/
+packages/
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+*.dmg
+*.AppImage
+
+# Installation artifacts
+install/
+prefix/
+
+# Clang tools
+.clangd/
+.cache/
+compile_flags.txt
