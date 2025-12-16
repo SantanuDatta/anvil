@@ -38,12 +38,16 @@ set(SOURCES
     src/core/ConfigManager.cpp
     src/core/ServiceManager.cpp
 
+    # Managers
+    src/managers/SiteManager.cpp
+
     # Services
     src/services/BaseService.cpp
     src/services/PHPService.cpp
     src/services/DnsService.cpp
     src/services/NginxService.cpp
     src/services/DatabaseService.cpp
+    src/services/NodeService.cpp
 )
 
 # Header files
@@ -64,12 +68,16 @@ set(HEADERS
     src/core/ConfigManager.h
     src/core/ServiceManager.h
 
+    # Managers
+    src/managers/SiteManager.h
+
     # Services
     src/services/BaseService.h
     src/services/PHPService.h
     src/services/DnsService.h
     src/services/NginxService.h
     src/services/DatabaseService.h
+    src/services/NodeService.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

@@ -12,21 +12,21 @@ namespace Anvil
     {
         namespace
         {
-            QString majorMinor(const QString &version)
+            // CRITICAL FIX: Centralized version normalization
+            QString normalizeVersion(const QString &version)
             {
                 QStringList parts = version.split('.');
                 if (parts.size() >= 2)
                 {
                     return parts[0] + "." + parts[1]; // "8.3.12" -> "8.3"
                 }
-                return version; // fallback
+                return version; // Already normalized or invalid
             }
         }
 
         PHPService::PHPService(QObject *parent)
             : BaseService("php", parent)
         {
-
             setDisplayName("PHP");
             setDescription("PHP Programming Language");
 
@@ -44,7 +44,8 @@ namespace Anvil
             auto versionResult = detectSystemPhpVersion();
             if (versionResult.isSuccess())
             {
-                m_currentVersion = versionResult.data;
+                // CRITICAL FIX: Normalize version before storing
+                m_currentVersion = normalizeVersion(versionResult.data);
                 setVersion(m_currentVersion);
             }
         }
@@ -171,20 +172,23 @@ namespace Anvil
 
         ServiceResult<bool> PHPService::installVersion(const QString &version)
         {
-            LOG_INFO(QString("Installing PHP %1").arg(version));
+            // CRITICAL FIX: Normalize input version
+            QString normalizedVersion = normalizeVersion(version);
 
-            emit installProgress(0, QString("Preparing to install PHP %1...").arg(version));
+            LOG_INFO(QString("Installing PHP %1").arg(normalizedVersion));
 
-            if (isVersionInstalled(version))
+            emit installProgress(0, QString("Preparing to install PHP %1...").arg(normalizedVersion));
+
+            if (isVersionInstalled(normalizedVersion))
             {
-                return ServiceResult<bool>::Err(QString("PHP %1 is already installed").arg(version));
+                return ServiceResult<bool>::Err(QString("PHP %1 is already installed").arg(normalizedVersion));
             }
 
             ServiceResult<bool> result;
 
             // Try repository installation first
             emit installProgress(10, "Checking repositories...");
-            result = installFromRepository(version);
+            result = installFromRepository(normalizedVersion);
 
             if (result.isError())
             {
@@ -192,12 +196,12 @@ namespace Anvil
                 LOG_INFO("Attempting source installation...");
 
                 emit installProgress(20, "Downloading PHP source...");
-                result = installFromSource(version);
+                result = installFromSource(normalizedVersion);
             }
 
             if (result.isSuccess())
             {
-                emit installProgress(100, QString("PHP %1 installed successfully").arg(version));
+                emit installProgress(100, QString("PHP %1 installed successfully").arg(normalizedVersion));
 
                 // Rescan installed versions
                 scanInstalledVersions();
@@ -205,8 +209,8 @@ namespace Anvil
                 // Configure the new installation
                 configure();
 
-                emit versionInstalled(version);
-                LOG_INFO(QString("PHP %1 installed successfully").arg(version));
+                emit versionInstalled(normalizedVersion);
+                LOG_INFO(QString("PHP %1 installed successfully").arg(normalizedVersion));
             }
             else
             {
@@ -218,17 +222,20 @@ namespace Anvil
 
         ServiceResult<bool> PHPService::uninstallVersion(const QString &version)
         {
-            LOG_INFO(QString("Uninstalling PHP %1").arg(version));
+            // CRITICAL FIX: Normalize input version
+            QString normalizedVersion = normalizeVersion(version);
 
-            if (!isVersionInstalled(version))
+            LOG_INFO(QString("Uninstalling PHP %1").arg(normalizedVersion));
+
+            if (!isVersionInstalled(normalizedVersion))
             {
-                return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(version));
+                return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(normalizedVersion));
             }
 
             // Stop FPM if running
-            if (isFpmRunning(version))
+            if (isFpmRunning(normalizedVersion))
             {
-                stopFpm(version);
+                stopFpm(normalizedVersion);
             }
 
             // Uninstall via package manager
@@ -236,28 +243,59 @@ namespace Anvil
 
             if (m_packageManager == "apt")
             {
-                const QString shortVer = majorMinor(version);
-                args << "remove" << "-y" << QString("php%1").arg(shortVer);
+                args << "remove" << "-y" << QString("php%1").arg(normalizedVersion);
                 auto result = executeAsRoot("apt", args);
 
                 if (result.isSuccess())
                 {
-                    m_installedVersions.remove(version);
-                    emit versionUninstalled(version);
+                    m_installedVersions.remove(normalizedVersion);
+                    emit versionUninstalled(normalizedVersion);
+                    return result;
+                }
+            }
+            else if (m_packageManager == "dnf" || m_packageManager == "yum")
+            {
+                QString compactVersion = normalizedVersion;
+                compactVersion.remove('.');
+
+                args << "remove" << "-y" << QString("php%1").arg(compactVersion);
+                auto result = executeAsRoot(m_packageManager, args);
+
+                if (result.isSuccess())
+                {
+                    m_installedVersions.remove(normalizedVersion);
+                    emit versionUninstalled(normalizedVersion);
+                    return result;
+                }
+            }
+            else if (m_packageManager == "pacman")
+            {
+                args << "-R" << "--noconfirm" << "php" << "php-fpm";
+                auto result = executeAsRoot("pacman", args);
+
+                if (result.isSuccess())
+                {
+                    m_installedVersions.remove(normalizedVersion);
+                    emit versionUninstalled(normalizedVersion);
                     return result;
                 }
             }
 
-            return ServiceResult<bool>::Err("Uninstallation failed");
+            return ServiceResult<bool>::Err(
+                QString("Uninstallation not supported for package manager: %1")
+                    .arg(m_packageManager));
         }
 
         ServiceResult<bool> PHPService::switchVersion(const QString &version)
         {
-            LOG_INFO(QString("Switching to PHP %1").arg(version));
+            // CRITICAL FIX: Normalize input version
+            QString normalizedVersion = normalizeVersion(version);
 
-            if (!isVersionInstalled(version))
+            LOG_INFO(QString("Switching to PHP %1").arg(normalizedVersion));
+
+            if (!isVersionInstalled(normalizedVersion))
             {
-                return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(version));
+                return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(normalizedVersion));
             }
 
             // Stop current FPM
@@ -267,22 +305,22 @@ namespace Anvil
             }
 
             // Update symlinks
-            updateSymlinks(version);
+            updateSymlinks(normalizedVersion);
 
             // Start new FPM
-            auto result = startFpm(version);
+            auto result = startFpm(normalizedVersion);
 
             if (result.isSuccess())
             {
-                m_currentVersion = version;
-                setVersion(version);
+                m_currentVersion = normalizedVersion;
+                setVersion(normalizedVersion);
 
                 // Update config
                 Core::ConfigManager &config = Core::ConfigManager::instance();
-                config.setDefaultPhpVersion(version);
+                config.setDefaultPhpVersion(normalizedVersion);
 
-                emit versionSwitched(version);
-                LOG_INFO(QString("Switched to PHP %1").arg(version));
+                emit versionSwitched(normalizedVersion);
+                LOG_INFO(QString("Switched to PHP %1").arg(normalizedVersion));
             }
 
             return result;
@@ -296,12 +334,16 @@ namespace Anvil
 
         Models::PHPVersion PHPService::getVersionInfo(const QString &version) const
         {
-            return m_installedVersions.value(version, Models::PHPVersion());
+            // CRITICAL FIX: Normalize lookup key
+            QString normalizedVersion = normalizeVersion(version);
+            return m_installedVersions.value(normalizedVersion, Models::PHPVersion());
         }
 
         bool PHPService::isVersionInstalled(const QString &version) const
         {
-            return m_installedVersions.contains(version);
+            // CRITICAL FIX: Normalize lookup key
+            QString normalizedVersion = normalizeVersion(version);
+            return m_installedVersions.contains(normalizedVersion);
         }
 
         ServiceResult<bool> PHPService::startFpm(const QString &version)
@@ -365,19 +407,18 @@ namespace Anvil
 
         bool PHPService::isFpmRunning(const QString &version) const
         {
-            // prefer full version for internal state – process() is your own worker
+            // Normalize version for checking
+            QString normalizedVersion = normalizeVersion(version);
+
             if (process()->isRunning())
             {
                 return true;
             }
 
-            const QString shortVer = majorMinor(version);
-
-            // Try a few possible service names
+            // Try possible service names
             QStringList serviceNames;
-            serviceNames << QString("php%1-fpm").arg(shortVer) // php8.3-fpm
-                         << QString("php%1-fpm").arg(version)  // php8.3.12-fpm (just in case)
-                         << "php-fpm";                         // generic
+            serviceNames << QString("php%1-fpm").arg(normalizedVersion)
+                         << "php-fpm";
 
             for (const QString &name : serviceNames)
             {
@@ -425,40 +466,96 @@ namespace Anvil
 
         ServiceResult<bool> PHPService::installExtension(const QString &version, const QString &extension)
         {
-            LOG_INFO(QString("Installing PHP %1 extension: %2").arg(version, extension));
+            // CRITICAL FIX: Normalize version
+            QString normalizedVersion = normalizeVersion(version);
+
+            LOG_INFO(QString("Installing PHP %1 extension: %2").arg(normalizedVersion, extension));
 
             QStringList args;
 
             if (m_packageManager == "apt")
             {
-                const QString shortVer = majorMinor(version);
-                args << "install" << "-y" << QString("php%1-%2").arg(shortVer, extension);
+                args << "install" << "-y" << QString("php%1-%2").arg(normalizedVersion, extension);
                 auto result = executeAsRoot("apt", args);
 
                 if (result.isSuccess())
                 {
-                    emit extensionInstalled(version, extension);
+                    emit extensionInstalled(normalizedVersion, extension);
+                    return result;
+                }
+            }
+            else if (m_packageManager == "dnf" || m_packageManager == "yum")
+            {
+                // Fedora/RHEL: php83-php-mysqlnd format
+                QString compactVersion = normalizedVersion;
+                compactVersion.remove('.');
+
+                QString pkgName = QString("php%1-php-%2")
+                                      .arg(compactVersion, extension);
+                args << "install" << "-y" << pkgName;
+
+                auto result = executeAsRoot(m_packageManager, args);
+
+                if (result.isSuccess())
+                {
+                    emit extensionInstalled(normalizedVersion, extension);
+                    return result;
+                }
+            }
+            else if (m_packageManager == "pacman")
+            {
+                // Arch: php-{extension} format
+                QString pkgName = QString("php-%1").arg(extension);
+                args << "-S" << "--noconfirm" << pkgName;
+
+                auto result = executeAsRoot("pacman", args);
+
+                if (result.isSuccess())
+                {
+                    emit extensionInstalled(normalizedVersion, extension);
                     return result;
                 }
             }
 
-            return ServiceResult<bool>::Err("Extension installation failed");
+            return ServiceResult<bool>::Err(
+                QString("Extension installation not supported for: %1")
+                    .arg(m_packageManager));
         }
 
         ServiceResult<bool> PHPService::uninstallExtension(const QString &version, const QString &extension)
         {
-            LOG_INFO(QString("Uninstalling PHP %1 extension: %2").arg(version, extension));
+            // CRITICAL FIX: Normalize version
+            QString normalizedVersion = normalizeVersion(version);
+
+            LOG_INFO(QString("Uninstalling PHP %1 extension: %2").arg(normalizedVersion, extension));
 
             QStringList args;
 
             if (m_packageManager == "apt")
             {
-                const QString shortVer = majorMinor(version);
-                args << "remove" << "-y" << QString("php%1-%2").arg(shortVer, extension);
+                args << "remove" << "-y" << QString("php%1-%2").arg(normalizedVersion, extension);
                 return executeAsRoot("apt", args);
             }
+            else if (m_packageManager == "dnf" || m_packageManager == "yum")
+            {
+                QString compactVersion = normalizedVersion;
+                compactVersion.remove('.');
 
-            return ServiceResult<bool>::Err("Extension uninstallation failed");
+                QString pkgName = QString("php%1-php-%2")
+                                      .arg(compactVersion, extension);
+                args << "remove" << "-y" << pkgName;
+                return executeAsRoot(m_packageManager, args);
+            }
+            else if (m_packageManager == "pacman")
+            {
+                QString pkgName = QString("php-%1").arg(extension);
+                args << "-R" << "--noconfirm" << pkgName;
+                return executeAsRoot("pacman", args);
+            }
+
+            return ServiceResult<bool>::Err(
+                QString("Extension removal not supported for: %1")
+                    .arg(m_packageManager));
         }
 
         ServiceResult<QString> PHPService::getPhpIni(const QString &version)
@@ -515,6 +612,9 @@ namespace Anvil
 
         QString PHPService::phpBinaryPath(const QString &version) const
         {
+            // Normalize version
+            QString normalizedVersion = normalizeVersion(version);
+
             // Check custom installation first
             QString customPath = Utils::FileSystem::joinPath(getPhpBasePath(version), "bin/php");
             if (Utils::FileSystem::fileExists(customPath))
@@ -522,14 +622,8 @@ namespace Anvil
                 return customPath;
             }
 
-            const QString shortVer = majorMinor(version);
-
-            // Check system installation (php8.3, php8.3.12, etc.)
-            QString systemPath = getProgramPath(QString("php%1").arg(shortVer));
-            if (systemPath.isEmpty())
-            {
-                systemPath = getProgramPath(QString("php%1").arg(version));
-            }
+            // Check system installation
+            QString systemPath = getProgramPath(QString("php%1").arg(normalizedVersion));
             if (!systemPath.isEmpty())
             {
                 return systemPath;
@@ -541,24 +635,19 @@ namespace Anvil
 
         QString PHPService::phpFpmBinaryPath(const QString &version) const
         {
-            // Your own custom install path will likely use full version – keep it that way.
+            // Normalize version
+            QString normalizedVersion = normalizeVersion(version);
+
             QString customPath = Utils::FileSystem::joinPath(getPhpBasePath(version), "sbin/php-fpm");
             if (Utils::FileSystem::fileExists(customPath))
             {
                 return customPath;
             }
 
-            const QString shortVer = majorMinor(version);
-
-            // Distro-style binaries usually use only major.minor
-            QString bin = getProgramPath(QString("php-fpm%1").arg(shortVer)); // php-fpm8.3
+            QString bin = getProgramPath(QString("php-fpm%1").arg(normalizedVersion));
             if (bin.isEmpty())
             {
-                bin = getProgramPath(QString("php-fpm%1").arg(version)); // php-fpm8.3.12 (rare)
-            }
-            if (bin.isEmpty())
-            {
-                bin = getProgramPath("php-fpm"); // generic
+                bin = getProgramPath("php-fpm");
             }
 
             return bin;
@@ -578,38 +667,83 @@ namespace Anvil
         {
             if (m_packageManager == "apt")
             {
-                const QString shortVer = majorMinor(version);
+                // Ubuntu/Debian - Try ondrej/php PPA first
+                if (isUbuntuPpaAvailable())
+                {
+                    LOG_INFO("Adding ondrej/php PPA for newer PHP versions");
+                    executeAsRoot("add-apt-repository", QStringList() << "-y" << "ppa:ondrej/php");
+                    executeAsRoot("apt", QStringList() << "update");
+                }
 
-                // Add Ondřej’s PPA, update, etc...
                 QStringList installArgs;
                 installArgs << "install" << "-y"
-                            << QString("php%1").arg(shortVer)
-                            << QString("php%1-fpm").arg(shortVer)
-                            << QString("php%1-cli").arg(shortVer)
-                            << QString("php%1-common").arg(shortVer);
+                            << QString("php%1").arg(version)
+                            << QString("php%1-fpm").arg(version)
+                            << QString("php%1-cli").arg(version)
+                            << QString("php%1-common").arg(version);
 
                 return executeAsRoot("apt", installArgs);
             }
+            else if (m_packageManager == "dnf")
+            {
+                // Fedora - Enable Remi's repository for newer PHP versions
+                LOG_INFO("Installing PHP from Fedora repositories");
 
-            return ServiceResult<bool>::Err("Unsupported package manager");
+                QString compactVersion = version;
+                compactVersion.remove('.');
+
+                QStringList installArgs;
+                installArgs << "install" << "-y"
+                            << QString("php%1").arg(compactVersion) // php83
+                            << QString("php%1-php-fpm").arg(compactVersion);
+
+                return executeAsRoot("dnf", installArgs);
+            }
+            else if (m_packageManager == "yum")
+            {
+                // CentOS/RHEL - Enable Remi's repository
+                LOG_INFO("Installing PHP from YUM repositories");
+
+                QString compactVersion = version;
+                compactVersion.remove('.');
+
+                QStringList installArgs;
+                installArgs << "install" << "-y"
+                            << QString("php%1").arg(compactVersion)
+                            << QString("php%1-php-fpm").arg(compactVersion);
+
+                return executeAsRoot("yum", installArgs);
+            }
+            else if (m_packageManager == "pacman")
+            {
+                // Arch Linux - Use official repos (usually has latest)
+                LOG_INFO("Installing PHP from Arch repositories");
+
+                QStringList installArgs;
+                installArgs << "-S" << "--noconfirm"
+                            << "php"
+                            << "php-fpm";
+
+                return executeAsRoot("pacman", installArgs);
+            }
+
+            return ServiceResult<bool>::Err(
+                QString("Package manager '%1' is not supported for PHP installation")
+                    .arg(m_packageManager));
         }
 
         ServiceResult<bool> PHPService::installFromSource(const QString &version)
         {
-            // This would involve downloading and compiling PHP from source
-            // For now, return error - source installation is complex
             return ServiceResult<bool>::Err("Source installation not yet implemented");
         }
 
         ServiceResult<bool> PHPService::downloadPhp(const QString &version, const QString &destination)
         {
-            // Download PHP source
             return ServiceResult<bool>::Err("Not implemented");
         }
 
         ServiceResult<bool> PHPService::compilePhp(const QString &version, const QString &sourceDir)
         {
-            // Compile PHP from source
             return ServiceResult<bool>::Err("Not implemented");
         }
 
@@ -628,7 +762,9 @@ namespace Anvil
 
             if (match.hasMatch())
             {
-                return ServiceResult<QString>::Ok(match.captured(1)); // "8.3.12"
+                QString fullVersion = match.captured(1); // "8.3.12"
+                // CRITICAL FIX: Return normalized version
+                return ServiceResult<QString>::Ok(normalizeVersion(fullVersion));
             }
 
             return ServiceResult<QString>::Err("Could not detect PHP version");
@@ -641,7 +777,7 @@ namespace Anvil
             QSet<QString> shortVersions; // like "8.3", "8.4"
 
             // 1) Scan custom base path: $phpPath/8.3, 8.4, etc.
-            QRegularExpression verRegex(R"(^(\\d+)\\.(\\d+)$)"); // "8.3"
+            QRegularExpression verRegex(R"(^(\d+)\.(\d+)$)");
 
             QDir baseDir(m_phpBasePath);
             if (baseDir.exists())
@@ -659,13 +795,13 @@ namespace Anvil
                 }
             }
 
-            // 2) Scan for phpX.Y binaries on the system (php8.3, php8.4, etc.)
+            // 2) Scan for phpX.Y binaries on the system
             for (int major = 5; major <= 9; ++major)
             {
                 for (int minor = 0; minor <= 10; ++minor)
                 {
                     const QString shortVer = QString("%1.%2").arg(major).arg(minor);
-                    const QString binName = QString("php%1").arg(shortVer); // php8.3
+                    const QString binName = QString("php%1").arg(shortVer);
 
                     if (checkProgramExists(binName))
                     {
@@ -674,7 +810,8 @@ namespace Anvil
                 }
             }
 
-            // 3) For each short version, resolve full version and register it
+            // 3) CRITICAL FIX: For each short version, resolve full version and register
+            //    but ALWAYS use short version as the key
             for (const QString &shortVer : shortVersions)
             {
                 QString phpBinary = phpBinaryPath(shortVer);
@@ -683,17 +820,20 @@ namespace Anvil
                     continue;
                 }
 
+                // Get full version (e.g., "8.3.12")
                 auto result = executeAndCapture(phpBinary,
                                                 QStringList() << "-r" << "echo PHP_VERSION;");
-                QString fullVer = result.isSuccess()
-                                      ? result.data.trimmed()
-                                      : shortVer;
+                QString fullVer = result.isSuccess() ? result.data.trimmed() : shortVer;
 
+                // Create PHPVersion object with full version info
                 Models::PHPVersion phpVersion(fullVer, phpBinary);
                 phpVersion.setIsInstalled(true);
 
-                // store under short key so "8.3" maps to full info
+                // CRITICAL FIX: Store under SHORT version key
                 m_installedVersions[shortVer] = phpVersion;
+
+                LOG_DEBUG(QString("Found PHP %1 (full: %2) at %3")
+                              .arg(shortVer, fullVer, phpBinary));
             }
 
             LOG_INFO(QString("Found %1 installed PHP versions").arg(m_installedVersions.size()));
@@ -702,56 +842,56 @@ namespace Anvil
         QString PHPService::generatePhpIniConfig(const QString &version)
         {
             return R"(
-                [PHP]
-                engine = On
-                short_open_tag = Off
-                precision = 14
-                output_buffering = 4096
-                zlib.output_compression = Off
-                implicit_flush = Off
-                serialize_precision = -1
-                disable_functions =
-                disable_classes =
-                zend.enable_gc = On
+[PHP]
+engine = On
+short_open_tag = Off
+precision = 14
+output_buffering = 4096
+zlib.output_compression = Off
+implicit_flush = Off
+serialize_precision = -1
+disable_functions =
+disable_classes =
+zend.enable_gc = On
 
-                expose_php = Off
+expose_php = Off
 
-                max_execution_time = 300
-                max_input_time = 60
-                memory_limit = 512M
+max_execution_time = 300
+max_input_time = 60
+memory_limit = 512M
 
-                error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
-                display_errors = Off
-                display_startup_errors = Off
-                log_errors = On
-                error_log = /var/log/php_errors.log
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+display_errors = Off
+display_startup_errors = Off
+log_errors = On
+error_log = /var/log/php_errors.log
 
-                post_max_size = 100M
-                upload_max_filesize = 100M
-                max_file_uploads = 20
+post_max_size = 100M
+upload_max_filesize = 100M
+max_file_uploads = 20
 
-                [Date]
-                date.timezone = UTC
-                )";
+[Date]
+date.timezone = UTC
+)";
         }
 
         QString PHPService::generateFpmPoolConfig(const QString &version)
         {
             return QString(R"(
-                [www]
-                user = www-data
-                group = www-data
+[www]
+user = www-data
+group = www-data
 
-                listen = /run/php/php%1-fpm.sock
-                listen.owner = www-data
-                listen.group = www-data
+listen = /run/php/php%1-fpm.sock
+listen.owner = www-data
+listen.group = www-data
 
-                pm = dynamic
-                pm.max_children = 10
-                pm.start_servers = 2
-                pm.min_spare_servers = 1
-                pm.max_spare_servers = 3
-            )")
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+)")
                 .arg(version);
         }
 
@@ -765,13 +905,13 @@ namespace Anvil
             QString phpBinary = phpBinaryPath(version);
             QString phpFpmBinary = phpFpmBinaryPath(version);
 
-            // Create symlinks for easy access
             Utils::FileSystem::createSymlink(phpBinary, "/usr/local/bin/php");
             Utils::FileSystem::createSymlink(phpFpmBinary, "/usr/local/bin/php-fpm");
         }
 
         QString PHPService::detectPackageManager() const
         {
+            // Detect in order of popularity
             if (checkProgramExists("apt"))
             {
                 return "apt";
@@ -788,12 +928,27 @@ namespace Anvil
             {
                 return "pacman";
             }
+            else if (checkProgramExists("zypper"))
+            {
+                return "zypper";
+            }
+            else if (checkProgramExists("apk"))
+            {
+                return "apk";
+            }
 
+            LOG_WARNING("No supported package manager detected");
             return QString();
         }
 
         bool PHPService::isUbuntuPpaAvailable() const
         {
+            // Only Ubuntu/Debian-based systems support PPAs
+            if (m_packageManager != "apt")
+            {
+                return false;
+            }
+
             return checkProgramExists("add-apt-repository");
         }
     }
