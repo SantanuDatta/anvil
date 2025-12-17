@@ -321,6 +321,8 @@ namespace Anvil
 
         void ProcessManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
         {
+            Q_UNUSED(exitStatus)
+
             QProcess *process = qobject_cast<QProcess *>(sender());
             if (!process)
                 return;
@@ -335,6 +337,8 @@ namespace Anvil
 
         void ProcessManager::onProcessError(QProcess::ProcessError error)
         {
+            Q_UNUSED(error)
+
             QProcess *process = qobject_cast<QProcess *>(sender());
             if (!process)
                 return;
@@ -551,6 +555,8 @@ namespace Anvil
 
         void ServiceProcess::onProcessError(QProcess::ProcessError error)
         {
+            Q_UNUSED(error)
+
             QString errorString = m_process->errorString();
             writeLog(QString("Service error: %1").arg(errorString));
             LOG_ERROR(QString("Service %1 error: %2").arg(m_name, errorString));

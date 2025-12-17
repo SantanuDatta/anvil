@@ -15,6 +15,12 @@
 #include <QDebug>
 #include "core/ConfigManager.h"
 #include "core/ServiceManager.h"
+#include "services/PHPService.h"
+#include "services/NginxService.h"
+#include "services/DatabaseService.h"
+#include "services/DnsService.h"
+#include "services/NodeService.h"
+#include "models/PHPVersion.h"
 #include "utils/Logger.h"
 
 using namespace Anvil;

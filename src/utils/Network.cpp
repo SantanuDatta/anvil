@@ -783,6 +783,8 @@ namespace Anvil
 
         void NetworkSpeedTest::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
         {
+            Q_UNUSED(bytesTotal)
+
             m_bytesReceived = bytesReceived;
 
             qint64 currentTime = QDateTime::currentMSecsSinceEpoch();

@@ -434,6 +434,8 @@ namespace Anvil
 
         ServiceResult<QStringList> PHPService::listAvailableExtensions(const QString &version)
         {
+            Q_UNUSED(version)
+
             QStringList extensions = {
                 "curl", "gd", "mbstring", "xml", "zip", "mysql", "pgsql",
                 "sqlite3", "redis", "imagick", "intl", "bcmath", "soap"};
@@ -734,16 +736,21 @@ namespace Anvil
 
         ServiceResult<bool> PHPService::installFromSource(const QString &version)
         {
+            Q_UNUSED(version)
             return ServiceResult<bool>::Err("Source installation not yet implemented");
         }
 
         ServiceResult<bool> PHPService::downloadPhp(const QString &version, const QString &destination)
         {
+            Q_UNUSED(version)
+            Q_UNUSED(destination)
             return ServiceResult<bool>::Err("Not implemented");
         }
 
         ServiceResult<bool> PHPService::compilePhp(const QString &version, const QString &sourceDir)
         {
+            Q_UNUSED(version)
+            Q_UNUSED(sourceDir)
             return ServiceResult<bool>::Err("Not implemented");
         }
 
@@ -841,38 +848,40 @@ namespace Anvil
 
         QString PHPService::generatePhpIniConfig(const QString &version)
         {
+            Q_UNUSED(version) // Add this line
+
             return R"(
-[PHP]
-engine = On
-short_open_tag = Off
-precision = 14
-output_buffering = 4096
-zlib.output_compression = Off
-implicit_flush = Off
-serialize_precision = -1
-disable_functions =
-disable_classes =
-zend.enable_gc = On
+                    [PHP]
+                    engine = On
+                    short_open_tag = Off
+                    precision = 14
+                    output_buffering = 4096
+                    zlib.output_compression = Off
+                    implicit_flush = Off
+                    serialize_precision = -1
+                    disable_functions =
+                    disable_classes =
+                    zend.enable_gc = On
 
-expose_php = Off
+                    expose_php = Off
 
-max_execution_time = 300
-max_input_time = 60
-memory_limit = 512M
+                    max_execution_time = 300
+                    max_input_time = 60
+                    memory_limit = 512M
 
-error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
-display_errors = Off
-display_startup_errors = Off
-log_errors = On
-error_log = /var/log/php_errors.log
+                    error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+                    display_errors = Off
+                    display_startup_errors = Off
+                    log_errors = On
+                    error_log = /var/log/php_errors.log
 
-post_max_size = 100M
-upload_max_filesize = 100M
-max_file_uploads = 20
+                    post_max_size = 100M
+                    upload_max_filesize = 100M
+                    max_file_uploads = 20
 
-[Date]
-date.timezone = UTC
-)";
+                    [Date]
+                    date.timezone = UTC
+                    )";
         }
 
         QString PHPService::generateFpmPoolConfig(const QString &version)

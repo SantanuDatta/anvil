@@ -1,12 +1,12 @@
 #include "SiteManager.h"
-#include "../core/ServiceManager.h"
-#include "../core/ConfigManager.h"
-#include "../services/NginxService.h"
-#include "../services/DatabaseService.h"
-#include "../services/DnsService.h"
-#include "../services/PHPService.h"
-#include "../utils/Logger.h"
-#include "../utils/FileSystem.h"
+#include "core/ServiceManager.h"
+#include "core/ConfigManager.h"
+#include "services/NginxService.h"
+#include "services/DatabaseService.h"
+#include "services/DnsService.h"
+#include "services/PHPService.h"
+#include "utils/Logger.h"
+#include "utils/FileSystem.h"
 
 #include <QJsonDocument>
 #include <QJsonArray>
