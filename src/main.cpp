@@ -15,6 +15,11 @@
 #include "core/ConfigManager.h"
 #include "core/ServiceManager.h"
 #include "models/Site.h"
+#include "models/PHPVersion.h"
+#include "services/PHPService.h"
+#include "services/NginxService.h"
+#include "services/DatabaseService.h"
+#include "services/DnsService.h"
 
 using namespace Anvil;
 
