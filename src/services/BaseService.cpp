@@ -147,37 +147,112 @@ namespace Anvil
         ServiceResult<bool> BaseService::executeAsRoot(const QString &command,
                                                        const QStringList &args) const
         {
-            static const QSet<QString> allowedCommands = {
-                "apt", "dnf", "yum", "pacman",
-                "systemctl", "mv", "cp", "chown"};
+            // ============================================================
+            // SECURITY: Command Whitelist
+            // ============================================================
+            // Only these commands are allowed to run with root privileges
+            static const QSet<QString> ALLOWED_COMMANDS = {
+                // Package managers
+                "apt", "apt-get", "dpkg",
+                "dnf", "yum", "rpm",
+                "pacman",
+                "zypper",
 
-            if (!allowedCommands.contains(command))
+                // System control
+                "systemctl",
+                "service",
+
+                // File operations (restricted)
+                "mv",
+                "cp",
+                "chown",
+                "chmod",
+                "mkdir",
+                "rm",
+                "ln",
+
+                // Certificate management
+                "openssl",
+                "certbot",
+
+                // User/group management
+                "usermod",
+                "groupadd",
+
+                // Repository management
+                "add-apt-repository"};
+
+            // Validate command is in whitelist
+            if (!ALLOWED_COMMANDS.contains(command))
             {
-                return ServiceResult<bool>::Err(
-                    QString("Command not allowed: %1").arg(command));
+                QString error = QString("Security Error: Command '%1' is not whitelisted for root execution")
+                                    .arg(command);
+                LOG_ERROR(error);
+                return ServiceResult<bool>::Err(error);
             }
 
-            // Sanitize arguments (prevent injection)
+            // ============================================================
+            // SECURITY: Argument Sanitization
+            // ============================================================
             for (const QString &arg : args)
             {
-                if (arg.contains(';') || arg.contains('|') || arg.contains('&'))
+                // Check for command injection characters
+                if (arg.contains(';') || arg.contains('|') || arg.contains('&') ||
+                    arg.contains('`') || arg.contains('$') || arg.contains('\n') ||
+                    arg.contains('\r'))
                 {
-                    return ServiceResult<bool>::Err("Invalid characters in arguments");
+                    QString error = QString("Security Error: Argument contains forbidden characters: %1")
+                                        .arg(arg);
+                    LOG_ERROR(error);
+                    return ServiceResult<bool>::Err(error);
+                }
+
+                // Check for shell expansion
+                if (arg.contains("$(") || arg.contains("${"))
+                {
+                    QString error = QString("Security Error: Argument contains shell expansion: %1")
+                                        .arg(arg);
+                    LOG_ERROR(error);
+                    return ServiceResult<bool>::Err(error);
+                }
+
+                // Check for path traversal (only for file operations)
+                static const QSet<QString> FILE_OPS = {"mv", "cp", "rm", "chown", "chmod"};
+                if (FILE_OPS.contains(command))
+                {
+                    // Allow absolute paths and relative paths, but block traversal
+                    if (arg.contains(".."))
+                    {
+                        QString error = QString("Security Error: Path traversal detected: %1")
+                                            .arg(arg);
+                        LOG_ERROR(error);
+                        return ServiceResult<bool>::Err(error);
+                    }
                 }
             }
 
+            // ============================================================
+            // SECURITY: Log audit trail
+            // ============================================================
+            LOG_INFO(QString("ROOT COMMAND: %1 %2").arg(command, args.join(" ")));
+
+            // ============================================================
+            // Execute with pkexec (GUI password prompt)
+            // ============================================================
             Utils::ProcessResult result = m_executor->executeAsRoot(command, args);
 
             if (result.isSuccess())
             {
+                LOG_DEBUG(QString("Root command completed successfully: %1").arg(command));
                 return ServiceResult<bool>::Ok(true);
             }
 
-            // Provide better error message
+            // Enhanced error message
             QString errorMsg = result.error.isEmpty()
                                    ? QString("Command failed with exit code %1").arg(result.exitCode)
                                    : result.error;
 
+            LOG_ERROR(QString("Root command failed: %1 - %2").arg(command, errorMsg));
             return ServiceResult<bool>::Err(errorMsg);
         }
 
