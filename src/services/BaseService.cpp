@@ -147,6 +147,25 @@ namespace Anvil
         ServiceResult<bool> BaseService::executeAsRoot(const QString &command,
                                                        const QStringList &args) const
         {
+            static const QSet<QString> allowedCommands = {
+                "apt", "dnf", "yum", "pacman",
+                "systemctl", "mv", "cp", "chown"};
+
+            if (!allowedCommands.contains(command))
+            {
+                return ServiceResult<bool>::Err(
+                    QString("Command not allowed: %1").arg(command));
+            }
+
+            // Sanitize arguments (prevent injection)
+            for (const QString &arg : args)
+            {
+                if (arg.contains(';') || arg.contains('|') || arg.contains('&'))
+                {
+                    return ServiceResult<bool>::Err("Invalid characters in arguments");
+                }
+            }
+
             Utils::ProcessResult result = m_executor->executeAsRoot(command, args);
 
             if (result.isSuccess())

@@ -12,6 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Gui
     Widgets
     Network
+    Concurrent
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -87,6 +88,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Gui
     Qt6::Widgets
     Qt6::Network
+    Qt6::Concurrent
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
