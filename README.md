@@ -144,24 +144,95 @@ anvil-cli php:install 8.4
 ## Project Structure
 
 ```
-anvil/
+Anvil/
+├── CMakeLists.txt
+├── README.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── build/                        # Build artifacts
+│   └── Anvil                     # Executable
 ├── src/
-│   ├── main.cpp              # Application entry point
-│   ├── core/                 # Core business logic
-│   │   ├── ServiceManager    # Manage system services
-│   │   ├── PhpManager        # PHP version management
-│   │   ├── NginxManager      # Nginx configuration
-│   │   └── SiteManager       # Site/domain management
-│   ├── ui/                   # Qt UI components
-│   │   ├── MainWindow
-│   │   ├── TrayIcon
-│   │   └── Dialogs
-│   └── utils/                # Utility classes
-├── resources/                # Icons, UI files, etc.
-├── tests/                    # Unit and integration tests
-├── docs/                     # Documentation
-└── CMakeLists.txt           # Build configuration
+│   ├── main.cpp                  # Application entry point
+│   │
+│   ├── core/                     # Core Foundation (Complete)
+│   │   ├── ConfigManager.h       # Configuration management
+│   │   ├── ConfigManager.cpp     # (~550 lines)
+│   │   ├── ServiceManager.h      # Service orchestration
+│   │   └── ServiceManager.cpp    # (~400 lines)
+│   │
+│   ├── services/                 # System Services (Complete)
+│   │   ├── BaseService.h/cpp     # Base class (~300 lines)
+│   │   ├── PHPService.h/cpp      # PHP version management (~800 lines)
+│   │   ├── NodeService.h/cpp     # Node.js/nvm management (~600 lines)
+│   │   ├── NginxService.h/cpp    # Web server config (~700 lines)
+│   │   ├── DatabaseService.h/cpp # MySQL/PostgreSQL (~900 lines)
+│   │   └── DnsService.h/cpp      # /etc/hosts management (~400 lines)
+│   │
+│   ├── managers/                 # Business Logic Orchestration
+│   │   ├── SiteManager.h/cpp     # Site lifecycle (~700 lines)
+│   │   ├── VersionManager.h/cpp  # TODO: Version switching
+│   │   └── ProcessManager.h/cpp  # TODO: Process management
+│   │
+│   ├── models/                  # Data Models (Complete)
+│   │   ├── Site.h/cpp           # Site representation (~200 lines)
+│   │   ├── PHPVersion.h/cpp     # PHP version info (~250 lines)
+│   │   └── Service.h/cpp        # Service status (~150 lines)
+│   │
+│   ├── utils/                   # Utilities (Complete)
+│   │   ├── Logger.h/cpp         # Logging system (~200 lines)
+│   │   ├── Process.h/cpp        # Process execution (~600 lines)
+│   │   ├── FileSystem.h/cpp     # File operations (~800 lines)
+│   │   ├── Network.h/cpp        # Network utilities (~700 lines)
+│   │   ├── DistroDetector.h/cpp # Linux distro detection (~300 lines)
+│   │   └── resources/           # TODO
+│   │       ├── icons/           # Application icons
+│   │       ├── scripts/         # Helper scripts
+│   │       └── templates/       # Config templates
+│   │
+│   ├── ui/                      # User Interface (TODO)
+│   │   ├── MainWindow.h/cpp     # Main application window
+│   │   ├── TrayIcon.h/cpp       # System tray integration
+│   │   └── dialogs/
+│   │       ├── AddSiteDialog.h/cpp     # Create site wizard
+│   │       └── SettingsDialog.h/cpp    # Application settings
+│   │
+│   └── tests/                    # Testing (Partial)
+│       ├── integration/          # Integration tests (2 files)
+│       │   ├── test_integration.cpp
+│       │   └── test_integration_2.cpp
+│       └── unit/                 # Unit tests (TODO)
 ```
+
+## 📊 Implementation Status
+
+### Phase 1: Core Foundation ✅ (100% Complete)
+- [x] ConfigManager - JSON-based configuration
+- [x] ServiceManager - Service lifecycle orchestration
+- [x] All Services (PHP, Node, Nginx, Database, DNS)
+- [x] Data Models (Site, PHPVersion, Service)
+- [x] Utilities (Logger, Process, FileSystem, Network)
+- [x] Security hardening (root command whitelist)
+
+### Phase 2: Site Management 🔄 (60% Complete)
+- [x] SiteManager - Site creation with rollback
+- [ ] VersionManager - PHP/Node version switching
+- [ ] ProcessManager - Advanced process management
+- [x] Transaction-like site operations
+- [x] DNS + Database + Nginx coordination
+
+### Phase 3: User Interface ⏳ (0% Complete)
+- [ ] MainWindow with tabs
+- [ ] AddSiteDialog for site creation
+- [ ] SettingsDialog for preferences
+- [ ] System tray integration
+- [ ] Service status indicators
+
+### Phase 4: Testing & Polish ⏳ (20% Complete)
+- [x] Integration test framework
+- [ ] Unit tests
+- [ ] CI/CD pipeline
+- [ ] Documentation
+- [ ] Packaging (deb/rpm/AppImage)
 
 ## Architecture
 
