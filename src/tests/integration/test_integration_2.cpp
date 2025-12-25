@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
     Utils::Logger::instance().setLogLevel(Utils::LogLevel::Info);
 
     qDebug() << "╔════════════════════════════════════════════╗";
-    qDebug() << "║   Anvil Phase 2 Test Suite                ║";
+    qDebug() << "║   Anvil Phase 2 Test Suite                 ║";
     qDebug() << "║   PHP Bug Fix + SiteManager                ║";
     qDebug() << "╚════════════════════════════════════════════╝";
 
