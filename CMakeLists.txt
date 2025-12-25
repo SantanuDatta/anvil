@@ -41,6 +41,7 @@ set(SOURCES
 
     # Managers
     src/managers/SiteManager.cpp
+    src/managers/VersionManager.cpp
 
     # Services
     src/services/BaseService.cpp
@@ -71,6 +72,7 @@ set(HEADERS
 
     # Managers
     src/managers/SiteManager.h
+    src/managers/VersionManager.h
 
     # Services
     src/services/BaseService.h

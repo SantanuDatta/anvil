@@ -16,6 +16,8 @@
 #include "utils/Logger.h"
 #include "core/ConfigManager.h"
 #include "core/ServiceManager.h"
+#include "managers/VersionManager.h"
+#include "managers/SiteManager.h"
 #include "models/Site.h"
 #include "models/PHPVersion.h"
 #include "services/PHPService.h"
@@ -275,6 +277,42 @@ private:
         layout->addWidget(group);
     }
 
+    void addVersionManagerControls(QVBoxLayout *layout)
+    {
+        QGroupBox *group = new QGroupBox("🔀 Version Manager", this);
+        QVBoxLayout *vbox = new QVBoxLayout(group);
+
+        QPushButton *btn = new QPushButton("📋 Show Version Status", this);
+        connect(btn, &QPushButton::clicked, this, &TestWindow::showVersionStatus);
+        vbox->addWidget(btn);
+
+        vbox->addWidget(new QLabel("─────────────────"));
+
+        vbox->addWidget(new QLabel("Per-Site PHP Version:"));
+
+        QHBoxLayout *hbox = new QHBoxLayout();
+        m_siteIdInput = new QLineEdit(this);
+        m_siteIdInput->setPlaceholderText("Site ID");
+        hbox->addWidget(m_siteIdInput);
+
+        m_siteVersionCombo = new QComboBox(this);
+        m_siteVersionCombo->addItem("8.3");
+        m_siteVersionCombo->addItem("8.4");
+        hbox->addWidget(m_siteVersionCombo);
+
+        vbox->addLayout(hbox);
+
+        btn = new QPushButton("🔧 Set Site Version", this);
+        connect(btn, &QPushButton::clicked, this, &TestWindow::setSiteVersion);
+        vbox->addWidget(btn);
+
+        btn = new QPushButton("📊 Show Sites Using Version", this);
+        connect(btn, &QPushButton::clicked, this, &TestWindow::showSitesUsingVersion);
+        vbox->addWidget(btn);
+
+        layout->addWidget(group);
+    }
+
     void addNginxControls(QVBoxLayout *layout)
     {
         QGroupBox *group = new QGroupBox("🌐 Nginx", this);
@@ -355,7 +393,7 @@ private:
     void showWelcome()
     {
         appendOutput("╔════════════════════════════════════════════╗");
-        appendOutput("║      Anvil - Laravel Herd for Linux       ║");
+        appendOutput("║      Anvil PHP Development Environment     ║");
         appendOutput("╚════════════════════════════════════════════╝");
         appendOutput("");
         appendOutput("🚀 Lightweight PHP development environment");
@@ -363,6 +401,103 @@ private:
     }
 
 private slots:
+    void showVersionStatus()
+    {
+        appendOutput("\n" + QString("=").repeated(50));
+        appendOutput("📋 VERSION MANAGER STATUS");
+        appendOutput(QString("=").repeated(50));
+
+        Managers::VersionManager versionManager;
+        if (!versionManager.initialize())
+        {
+            appendOutput("❌ Failed to initialize VersionManager");
+            return;
+        }
+
+        appendOutput("✅ VersionManager initialized");
+        appendOutput("");
+
+        // Global versions
+        appendOutput("🌍 Global Versions:");
+        appendOutput(QString("  PHP:  %1").arg(versionManager.globalPhpVersion()));
+        appendOutput(QString("  Node: %1").arg(versionManager.globalNodeVersion()));
+        appendOutput("");
+
+        // Installed PHP versions
+        auto phpVersions = versionManager.listInstalledPhpVersions();
+        if (phpVersions.isSuccess() && !phpVersions.data.isEmpty())
+        {
+            appendOutput("📦 Installed PHP Versions:");
+            for (const auto &ver : phpVersions.data)
+            {
+                QString marker = ver.isDefault() ? " ⭐" : "";
+                appendOutput(QString("  • PHP %1%2").arg(ver.version(), marker));
+            }
+            appendOutput("");
+        }
+
+        // Installed Node versions
+        auto nodeVersions = versionManager.listInstalledNodeVersions();
+        if (nodeVersions.isSuccess() && !nodeVersions.data.isEmpty())
+        {
+            appendOutput("📦 Installed Node Versions:");
+            for (const QString &ver : nodeVersions.data)
+            {
+                appendOutput(QString("  • Node %1").arg(ver));
+            }
+        }
+    }
+    void setSiteVersion()
+    {
+        QString siteId = m_siteIdInput->text();
+        QString version = m_siteVersionCombo->currentText();
+
+        if (siteId.isEmpty())
+        {
+            appendOutput("✗ Please enter a site ID");
+            return;
+        }
+
+        appendOutput(QString("\n🔧 Setting site %1 to PHP %2").arg(siteId, version));
+
+        Managers::VersionManager versionManager;
+        versionManager.initialize();
+
+        auto result = versionManager.setSitePhpVersion(siteId, version);
+        if (result.isSuccess())
+        {
+            appendOutput(QString("✅ Site %1 now uses PHP %2").arg(siteId, version));
+            m_siteIdInput->clear();
+        }
+        else
+        {
+            appendOutput(QString("❌ Failed: %1").arg(result.error));
+        }
+    }
+    void showSitesUsingVersion()
+    {
+        QString version = m_siteVersionCombo->currentText();
+
+        appendOutput(QString("\n📊 Sites using PHP %1:").arg(version));
+
+        Managers::VersionManager versionManager;
+        versionManager.initialize();
+
+        QStringList sites = versionManager.getSitesUsingPhpVersion(version);
+
+        if (sites.isEmpty())
+        {
+            appendOutput("  (no sites using this version)");
+        }
+        else
+        {
+            for (const QString &siteId : sites)
+            {
+                appendOutput(QString("  • %1").arg(siteId));
+            }
+        }
+    }
+
     void startBackgroundInit()
     {
         appendOutput("Initializing (background)...");
