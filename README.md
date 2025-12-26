@@ -170,8 +170,8 @@ Anvil/
 │   │
 │   ├── managers/                 # Business Logic Orchestration
 │   │   ├── SiteManager.h/cpp     # Site lifecycle (~700 lines)
-│   │   ├── VersionManager.h/cpp  # TODO: Version switching
-│   │   └── ProcessManager.h/cpp  # TODO: Process management
+│   │   ├── VersionManager.h/cpp  # Done
+│   │   └── ProcessManager.h/cpp  # Done
 │   │
 │   ├── models/                  # Data Models (Complete)
 │   │   ├── Site.h/cpp           # Site representation (~200 lines)
@@ -199,7 +199,9 @@ Anvil/
 │   └── tests/                    # Testing (Partial)
 │       ├── integration/          # Integration tests (2 files)
 │       │   ├── test_integration.cpp
-│       │   └── test_integration_2.cpp
+│       │   ├── test_integration_2.cpp
+│       │   ├── test_prcess_manager.cpp
+│       │   └── test_version_manager.cpp
 │       └── unit/                 # Unit tests (TODO)
 ```
 
@@ -213,10 +215,10 @@ Anvil/
 - [x] Utilities (Logger, Process, FileSystem, Network)
 - [x] Security hardening (root command whitelist)
 
-### Phase 2: Site Management 🔄 (60% Complete)
+### Phase 2: Site Management ✅ (100% Complete)
 - [x] SiteManager - Site creation with rollback
-- [ ] VersionManager - PHP/Node version switching
-- [ ] ProcessManager - Advanced process management
+- [x] VersionManager - PHP/Node version switching
+- [x] ProcessManager - Advanced process management
 - [x] Transaction-like site operations
 - [x] DNS + Database + Nginx coordination
 
