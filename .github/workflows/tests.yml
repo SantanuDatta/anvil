@@ -28,7 +28,17 @@ jobs:
             libssl-dev
 
       - name: Configure
-        run: cmake -S . -B build -DENABLE_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+        run: |
+          if command -v qtpaths6 >/dev/null 2>&1; then
+            QT_PREFIX=$(qtpaths6 --query QT_INSTALL_PREFIX)
+          else
+            QT_PREFIX=$(qtpaths6-qt6 --query QT_INSTALL_PREFIX)
+          fi
+          cmake -S . -B build \
+            -DENABLE_TESTING=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${QT_PREFIX}" \
+            -DQt6_DIR="${QT_PREFIX}/lib/cmake/Qt6"
 
       - name: Build
         run: cmake --build build -j$(nproc)
