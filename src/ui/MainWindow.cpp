@@ -1,5 +1,10 @@
 #include "ui/MainWindow.h"
 #include "ui/Theme.h"
+#include "core/ConfigManager.h"
+#include "services/DatabaseService.h"
+#include "services/NginxService.h"
+#include "services/NodeService.h"
+#include "services/PHPService.h"
 #include "utils/Logger.h"
 #include <QApplication>
 #include <QScreen>
@@ -413,7 +418,12 @@ namespace Anvil::UI
 
     void MainWindow::updateServiceIndicators()
     {
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            LOG_ERROR("ServiceManager not available for service status update");
+            return;
+        }
 
         for (auto it = m_serviceIndicators.begin(); it != m_serviceIndicators.end(); ++it)
         {
@@ -423,22 +433,22 @@ namespace Anvil::UI
 
             if (serviceName == "nginx")
             {
-                auto *nginx = manager.nginxService();
+                auto *nginx = manager->nginxService();
                 isRunning = nginx && nginx->isRunning();
             }
             else if (serviceName == "php")
             {
-                auto *php = manager.phpService();
+                auto *php = manager->phpService();
                 isRunning = php && php->isRunning();
             }
             else if (serviceName == "mysql")
             {
-                auto *db = manager.databaseService();
+                auto *db = manager->databaseService();
                 isRunning = db && db->isRunning();
             }
             else if (serviceName == "node")
             {
-                auto *node = manager.nodeService();
+                auto *node = manager->nodeService();
                 isRunning = node && node->isRunning();
             }
 
@@ -535,13 +545,19 @@ namespace Anvil::UI
         if (reply != QMessageBox::Yes)
             return;
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            showError("Service Manager Error", "Service manager is not available.");
+            LOG_ERROR("ServiceManager not available when stopping services");
+            return;
+        }
 
-        if (auto *nginx = manager.nginxService())
+        if (auto *nginx = manager->nginxService())
             nginx->stop();
-        if (auto *php = manager.phpService())
+        if (auto *php = manager->phpService())
             php->stop();
-        if (auto *db = manager.databaseService())
+        if (auto *db = manager->databaseService())
             db->stop();
 
         LOG_INFO("All services stopped by user");
@@ -550,6 +566,7 @@ namespace Anvil::UI
 
     void MainWindow::onPhpVersionChanged(const QString &version)
     {
+        Q_UNUSED(version);
         QString versionNum = m_phpVersionCombo->currentData().toString();
         if (versionNum.isEmpty() || versionNum == m_versionManager->globalPhpVersion())
             return;
@@ -679,7 +696,7 @@ namespace Anvil::UI
         if (reply != QMessageBox::Yes)
             return;
 
-            LOG_INFO(QString("Installing PHP %1").arg(version));
+        LOG_INFO(QString("Installing PHP %1").arg(version));
         auto result = m_versionManager->installPhpVersion(version);
 
         if (result.isSuccess())

@@ -16,8 +16,13 @@ void testPhpVersionBugFix()
 {
     qDebug() << "\n=== Testing PHP Version Bug Fix ===";
 
-    Core::ServiceManager &manager = Core::ServiceManager::instance();
-    auto *phpService = manager.phpService();
+    auto *manager = Core::ServiceManager::instance();
+    if (!manager)
+    {
+        qDebug() << "❌ ServiceManager not available";
+        return;
+    }
+    auto *phpService = manager->phpService();
 
     if (!phpService || !phpService->isInstalled())
     {
@@ -334,7 +339,10 @@ int main(int argc, char *argv[])
 
     // Initialize core systems
     Core::ConfigManager::instance().initialize();
-    Core::ServiceManager::instance().initialize();
+    if (auto *manager = Core::ServiceManager::instance())
+    {
+        manager->initialize();
+    }
 
     try
     {

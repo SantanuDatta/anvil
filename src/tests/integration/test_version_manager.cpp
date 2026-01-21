@@ -371,7 +371,10 @@ int main(int argc, char *argv[])
     {
         // Initialize core systems
         Core::ConfigManager::instance().initialize();
-        Core::ServiceManager::instance().initialize();
+        if (auto *manager = Core::ServiceManager::instance())
+        {
+            manager->initialize();
+        }
 
         // Run tests
         testVersionManagerInitialization();

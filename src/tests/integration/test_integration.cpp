@@ -71,10 +71,15 @@ void testServiceManager()
 {
     qDebug() << "\n=== Testing ServiceManager ===";
 
-    Core::ServiceManager &manager = Core::ServiceManager::instance();
+    auto *manager = Core::ServiceManager::instance();
+    if (!manager)
+    {
+        qDebug() << "❌ ServiceManager not available";
+        return;
+    }
 
     // Test initialization
-    if (!manager.initialize())
+    if (!manager->initialize())
     {
         qDebug() << "❌ ServiceManager initialization failed";
         return;
@@ -82,11 +87,11 @@ void testServiceManager()
     qDebug() << "✓ ServiceManager initialized";
 
     // Test service accessors
-    auto *phpService = manager.phpService();
-    auto *nginxService = manager.nginxService();
-    auto *databaseService = manager.databaseService();
-    auto *dnsService = manager.dnsService();
-    auto *nodeService = manager.nodeService();
+    auto *phpService = manager->phpService();
+    auto *nginxService = manager->nginxService();
+    auto *databaseService = manager->databaseService();
+    auto *dnsService = manager->dnsService();
+    auto *nodeService = manager->nodeService();
 
     qDebug() << "✓ All service pointers valid:";
     qDebug() << "  - PHP:" << (phpService != nullptr);
@@ -96,14 +101,14 @@ void testServiceManager()
     qDebug() << "  - Node:" << (nodeService != nullptr);
 
     // Test available services
-    QStringList services = manager.availableServices();
+    QStringList services = manager->availableServices();
     qDebug() << "✓ Available services:" << services;
 
     // Test service status
     qDebug() << "\n=== Service Installation Status ===";
     for (const QString &service : services)
     {
-        Models::Service status = manager.getServiceStatus(service);
+        Models::Service status = manager->serviceStatus(service);
         qDebug() << QString("  %1: %2 (v%3)")
                         .arg(service.leftJustified(12))
                         .arg(status.statusString())
@@ -111,12 +116,12 @@ void testServiceManager()
     }
 
     // Test health check
-    bool healthy = manager.isHealthy();
+    bool healthy = manager->isHealthy();
     qDebug() << "\n✓ System healthy:" << healthy;
 
     if (!healthy)
     {
-        QStringList issues = manager.getHealthIssues();
+        QStringList issues = manager->getHealthIssues();
         qDebug() << "  Issues:";
         for (const QString &issue : issues)
         {
@@ -129,8 +134,13 @@ void testNodeService()
 {
     qDebug() << "\n=== Testing NodeService ===";
 
-    Core::ServiceManager &manager = Core::ServiceManager::instance();
-    auto *nodeService = manager.nodeService();
+    auto *manager = Core::ServiceManager::instance();
+    if (!manager)
+    {
+        qDebug() << "❌ ServiceManager not available";
+        return;
+    }
+    auto *nodeService = manager->nodeService();
 
     if (!nodeService)
     {
@@ -186,25 +196,30 @@ void testIntegration()
     qDebug() << "\n=== Testing Full Integration ===";
 
     Core::ConfigManager &config = Core::ConfigManager::instance();
-    Core::ServiceManager &manager = Core::ServiceManager::instance();
+    auto *manager = Core::ServiceManager::instance();
+    if (!manager)
+    {
+        qDebug() << "❌ ServiceManager not available";
+        return;
+    }
 
     // Test ConfigManager -> ServiceManager integration
     QString phpVersion = config.defaultPhpVersion();
-    auto *phpService = manager.phpService();
+    auto *phpService = manager->phpService();
 
     qDebug() << "✓ Config says default PHP:" << phpVersion;
     qDebug() << "✓ PHP service current version:" << phpService->currentVersion();
 
     // Test NodeService integration
     QString nodeVersion = config.defaultNodeVersion();
-    auto *nodeService = manager.nodeService();
+    auto *nodeService = manager->nodeService();
 
     qDebug() << "✓ Config says default Node:" << nodeVersion;
     qDebug() << "✓ Node service current version:" << nodeService->currentVersion();
 
     // Test service orchestration
-    QStringList running = manager.runningServices();
-    QStringList stopped = manager.stoppedServices();
+    QStringList running = manager->runningServices();
+    QStringList stopped = manager->stoppedServices();
 
     qDebug() << "\n✓ Running services:" << running;
     qDebug() << "✓ Stopped services:" << stopped;

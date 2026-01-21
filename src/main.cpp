@@ -57,9 +57,9 @@ public slots:
 
             // Initialize ServiceManager
             emit progressUpdate("Scanning system services...");
-            Core::ServiceManager &manager = Core::ServiceManager::instance();
+            auto *manager = Core::ServiceManager::instance();
 
-            if (!manager.initialize())
+            if (!manager || !manager->initialize())
             {
                 emit error("Failed to initialize services");
                 emit finished();
@@ -77,7 +77,7 @@ public slots:
             QMap<QString, QString> serviceVersions;
             QList<Models::PHPVersion> phpVersions;
 
-            if (auto *php = manager.phpService())
+            if (auto *php = manager->phpService())
             {
                 if (php->isInstalled())
                 {
@@ -97,7 +97,7 @@ public slots:
                 }
             }
 
-            if (auto *nginx = manager.nginxService())
+            if (auto *nginx = manager->nginxService())
             {
                 if (nginx->isInstalled())
                 {
@@ -110,7 +110,7 @@ public slots:
                 }
             }
 
-            if (auto *db = manager.databaseService())
+            if (auto *db = manager->databaseService())
             {
                 if (db->isInstalled())
                 {
@@ -537,11 +537,16 @@ private slots:
         appendOutput("");
         appendOutput("Starting installation...");
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            appendOutput("⚠️  Service manager not available");
+            return;
+        }
 
         // 1. Install PHP
         appendOutput("\n📦 Installing PHP 8.3...");
-        if (auto *php = manager.phpService())
+        if (auto *php = manager->phpService())
         {
             auto result = php->installVersion("8.3");
             if (result.isSuccess())
@@ -556,7 +561,7 @@ private slots:
 
         // 2. Install Nginx
         appendOutput("\n📦 Installing Nginx...");
-        if (auto *nginx = manager.nginxService())
+        if (auto *nginx = manager->nginxService())
         {
             auto result = nginx->install();
             if (result.isSuccess())
@@ -571,7 +576,7 @@ private slots:
 
         // 3. Install MySQL
         appendOutput("\n📦 Installing MySQL...");
-        if (auto *db = manager.databaseService())
+        if (auto *db = manager->databaseService())
         {
             db->setDatabaseType(Services::DatabaseService::stringToDatabaseType("MySQL"));
             auto result = db->install();
@@ -610,8 +615,13 @@ private slots:
         appendOutput("⏱️  Installation takes 2-5 minutes");
         appendOutput("");
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
-        auto *php = manager.phpService();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            appendOutput("❌ Service manager not available");
+            return;
+        }
+        auto *php = manager->phpService();
 
         if (!php)
         {
@@ -736,20 +746,25 @@ private slots:
         appendOutput(QString("-").repeated(50));
 
         // Quick check (this should be fast)
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            appendOutput("✗ Service manager not available");
+            return;
+        }
 
         int detected = 0;
-        if (auto *php = manager.phpService(); php && php->isInstalled())
+        if (auto *php = manager->phpService(); php && php->isInstalled())
         {
             appendOutput("✓ PHP installed");
             detected++;
         }
-        if (auto *nginx = manager.nginxService(); nginx && nginx->isInstalled())
+        if (auto *nginx = manager->nginxService(); nginx && nginx->isInstalled())
         {
             appendOutput("✓ Nginx installed");
             detected++;
         }
-        if (auto *db = manager.databaseService(); db && db->isInstalled())
+        if (auto *db = manager->databaseService(); db && db->isInstalled())
         {
             appendOutput(QString("✓ %1 installed").arg(db->databaseTypeString()));
             detected++;
@@ -765,8 +780,16 @@ private slots:
     {
         appendOutput("\n📋 DETECTING PHP VERSIONS");
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
-        auto *php = manager.phpService();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            appendOutput("✗ Service manager not available");
+            m_phpVersionCombo->clear();
+            m_phpVersionCombo->addItem("No PHP installed");
+            m_phpVersionCombo->setEnabled(false);
+            return;
+        }
+        auto *php = manager->phpService();
 
         if (!php || !php->isInstalled())
         {
@@ -824,7 +847,8 @@ private slots:
 
         appendOutput(QString("\n🔄 Switching to PHP %1...").arg(version));
 
-        auto *php = Core::ServiceManager::instance().phpService();
+        auto *manager = Core::ServiceManager::instance();
+        auto *php = manager ? manager->phpService() : nullptr;
         if (!php)
             return;
 
@@ -846,7 +870,8 @@ private slots:
     {
         appendOutput("\n🔍 Testing Nginx config...");
 
-        auto *nginx = Core::ServiceManager::instance().nginxService();
+        auto *manager = Core::ServiceManager::instance();
+        auto *nginx = manager ? manager->nginxService() : nullptr;
         if (!nginx || !nginx->isInstalled())
         {
             appendOutput("✗ Nginx not installed");
@@ -861,7 +886,8 @@ private slots:
     {
         appendOutput("\n🔄 Reloading Nginx...");
 
-        auto *nginx = Core::ServiceManager::instance().nginxService();
+        auto *manager = Core::ServiceManager::instance();
+        auto *nginx = manager ? manager->nginxService() : nullptr;
         if (!nginx)
             return;
 
@@ -875,10 +901,15 @@ private slots:
         appendOutput("SERVICE STATUS");
         appendOutput(QString("-").repeated(50));
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
-        for (const QString &name : manager.availableServices())
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
         {
-            auto status = manager.getServiceStatus(name);
+            appendOutput("✗ Service manager not available");
+            return;
+        }
+        for (const QString &name : manager->availableServices())
+        {
+            auto status = manager->serviceStatus(name);
             QString icon = status.isRunning() ? "🟢" : "🔴";
             appendOutput(QString("%1 %2: %3").arg(icon, name, status.statusString()));
         }
@@ -892,7 +923,8 @@ private slots:
 
         appendOutput(QString("\n🗄️  Creating: %1").arg(name));
 
-        auto *db = Core::ServiceManager::instance().databaseService();
+        auto *manager = Core::ServiceManager::instance();
+        auto *db = manager ? manager->databaseService() : nullptr;
         if (!db)
             return;
 
@@ -916,7 +948,8 @@ private slots:
 
         appendOutput(QString("\n🌍 Adding: %1 → 127.0.0.1").arg(domain));
 
-        auto *dns = Core::ServiceManager::instance().dnsService();
+        auto *manager = Core::ServiceManager::instance();
+        auto *dns = manager ? manager->dnsService() : nullptr;
         if (!dns)
             return;
 
@@ -946,10 +979,15 @@ private slots:
 
         appendOutput(QString("\n🚀 Creating: %1").arg(name));
 
-        Core::ServiceManager &manager = Core::ServiceManager::instance();
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            appendOutput("✗ Service manager not available");
+            return;
+        }
 
         // DNS
-        if (auto *dns = manager.dnsService())
+        if (auto *dns = manager->dnsService())
         {
             dns->addEntry(domain);
             appendOutput("✓ DNS configured");
@@ -958,7 +996,7 @@ private slots:
         // Database
         QString dbName = domain;
         dbName.replace('.', '_');
-        if (auto *db = manager.databaseService(); db && db->isInstalled())
+        if (auto *db = manager->databaseService(); db && db->isInstalled())
         {
             db->createDatabase(dbName);
             appendOutput(QString("✓ Database: %1").arg(dbName));
@@ -968,7 +1006,7 @@ private slots:
         Models::Site site(name, path, domain);
         site.setPhpVersion(m_phpVersionCombo->currentText());
 
-        if (auto *nginx = manager.nginxService(); nginx && nginx->isInstalled())
+        if (auto *nginx = manager->nginxService(); nginx && nginx->isInstalled())
         {
             auto result = nginx->addSite(site);
             if (result.isSuccess())

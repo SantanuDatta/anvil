@@ -14,6 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Widgets
     Network
     Concurrent
+    DBus
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -81,6 +82,7 @@ target_link_libraries(anvil_ui PUBLIC
     Qt6::Widgets
     Qt6::Network
     Qt6::Concurrent
+    Qt6::DBus
 )
 
 target_include_directories(anvil_ui PUBLIC
