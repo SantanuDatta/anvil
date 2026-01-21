@@ -58,7 +58,8 @@ namespace Anvil::Utils
 
         // Execute shell command
         ProcessResult executeShell(const QString &command,
-                                   const QString &workingDir = QString());
+                                   const QString &workingDir = QString(),
+                                   int timeoutMs = 30000);
 
         // Check if program exists
         bool programExists(const QString &program);

@@ -38,8 +38,8 @@ namespace Anvil::Managers
             return true;
         }
         LOG_INFO("Initializing VersionManager");
-        Core::ServiceManager &serviceManager = Core::ServiceManager::instance();
-        if (!serviceManager.isInitialized())
+        Core::ServiceManager *serviceManager = Core::ServiceManager::instance();
+        if (!serviceManager || !serviceManager->isInitialized())
         {
             LOG_ERROR("ServiceManager not initialized");
             return false;
@@ -444,12 +444,14 @@ namespace Anvil::Managers
 
     Services::PHPService *VersionManager::phpService() const
     {
-        return Core::ServiceManager::instance().phpService();
+        auto *serviceManager = Core::ServiceManager::instance();
+        return serviceManager ? serviceManager->phpService() : nullptr;
     }
 
     Services::NodeService *VersionManager::nodeService() const
     {
-        return Core::ServiceManager::instance().nodeService();
+        auto *serviceManager = Core::ServiceManager::instance();
+        return serviceManager ? serviceManager->nodeService() : nullptr;
     }
 
     Services::ServiceResult<bool> VersionManager::validatePhpVersion(const QString &version) const
