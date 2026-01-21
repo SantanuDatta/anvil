@@ -29,7 +29,11 @@ jobs:
 
       - name: Configure
         run: |
-          QT_PREFIX=$(qtpaths6 --qt-install-prefix)
+          if command -v qtpaths6 >/dev/null 2>&1; then
+            QT_PREFIX=$(qtpaths6 --query QT_INSTALL_PREFIX)
+          else
+            QT_PREFIX=$(qtpaths6-qt6 --query QT_INSTALL_PREFIX)
+          fi
           cmake -S . -B build \
             -DENABLE_TESTING=ON \
             -DCMAKE_BUILD_TYPE=Release \
