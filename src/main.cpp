@@ -24,6 +24,7 @@
 #include "services/NginxService.h"
 #include "services/DatabaseService.h"
 #include "services/DnsService.h"
+#include "ui/MainWindow.h"
 
 using namespace Anvil;
 
@@ -1040,7 +1041,7 @@ int main(int argc, char *argv[])
 
     LOG_INFO("Anvil - Laravel Herd for Linux");
 
-    TestWindow window;
+    Anvil::UI::MainWindow window;
     window.show();
 
     return app.exec();
