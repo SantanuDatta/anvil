@@ -104,7 +104,7 @@ namespace Anvil::UI
         Managers::VersionManager *m_versionManager;
         QTimer *m_updateTimer;
 
-        static constexpr int SIDEBAR_WIDTH = 200;
+        static constexpr int SIDEBAR_WIDTH = 250;
         static constexpr int UPDATE_INTERVAL = 5000;
     };
 }

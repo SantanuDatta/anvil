@@ -301,9 +301,9 @@ namespace Anvil::UI
             color: %6;
             border: none;
             border-radius: 6px;
-            padding: 8px 16px;
+            padding: 4px 8px;
             font-weight: 600;
-            min-height: 36px;
+            min-height: 26px;
         }
 
         QPushButton.primary:hover {
@@ -322,9 +322,9 @@ namespace Anvil::UI
             color: %1;
             border: 1px solid %7;
             border-radius: 6px;
-            padding: 8px 16px;
+            padding: 4px 8px;
             font-weight: 500;
-            min-height: 36px;
+            min-height: 26px;
         }
 
         QPushButton.secondary:hover {
@@ -337,9 +337,9 @@ namespace Anvil::UI
             color: white;
             border: none;
             border-radius: 6px;
-            padding: 8px 16px;
+            padding: 4px 8px;
             font-weight: 600;
-            min-height: 36px;
+            min-height: 26px;
         }
 
         QPushButton.destructive:hover {
@@ -351,7 +351,7 @@ namespace Anvil::UI
             background-color: %2;
             border: 1px solid %7;
             border-radius: 6px;
-            padding: 8px 12px;
+            padding: 4px 6px;
             min-height: 36px;
             color: %1;
         }
