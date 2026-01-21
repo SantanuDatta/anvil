@@ -3,6 +3,8 @@
 #include "utils/Logger.h"
 #include "utils/FileSystem.h"
 #include "utils/Network.h"
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QRegularExpression>
 
 namespace Anvil::Services

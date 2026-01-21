@@ -41,7 +41,8 @@ jobs:
             -DQt6_DIR="${QT_PREFIX}/lib/cmake/Qt6"
 
       - name: Build
-        run: cmake --build build -j$(nproc)
+        run: |
+          cmake --build build -j$(nproc)
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
