@@ -84,8 +84,6 @@ anvil
 Anvil
 
 # Linux specific
-*.core
-core
 *.pid
 *.seed
 *.pid.lock
