@@ -15,6 +15,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Network
     Concurrent
     DBus
+    Test
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -112,29 +113,29 @@ option(ENABLE_TESTING "Enable testing" OFF)
 if(ENABLE_TESTING)
     enable_testing()
 
-    add_executable(test_integration
-        src/tests/integration/test_integration.cpp
+    add_executable(test_php_version
+        src/tests/unit/test_php_version.cpp
     )
-    target_link_libraries(test_integration PRIVATE anvil_backend)
-    add_test(NAME IntegrationTest1 COMMAND test_integration)
+    target_link_libraries(test_php_version PRIVATE anvil_backend Qt6::Test)
+    add_test(NAME PHPVersionUnitTest COMMAND test_php_version)
 
-    add_executable(test_integration_2
-        src/tests/integration/test_integration_2.cpp
+    add_executable(test_site
+        src/tests/unit/test_site.cpp
     )
-    target_link_libraries(test_integration_2 PRIVATE anvil_backend)
-    add_test(NAME IntegrationTest2 COMMAND test_integration_2)
+    target_link_libraries(test_site PRIVATE anvil_backend Qt6::Test)
+    add_test(NAME SiteUnitTest COMMAND test_site)
 
-    add_executable(test_version_manager
-        src/tests/integration/test_version_manager.cpp
+    add_executable(test_filesystem_integration
+        src/tests/integration/test_filesystem_integration.cpp
     )
-    target_link_libraries(test_version_manager PRIVATE anvil_backend)
-    add_test(NAME VersionManagerTest COMMAND test_version_manager)
+    target_link_libraries(test_filesystem_integration PRIVATE anvil_backend Qt6::Test)
+    add_test(NAME FileSystemIntegrationTest COMMAND test_filesystem_integration)
 
-    add_executable(test_process_manager
-        src/tests/integration/test_process_manager.cpp
+    add_executable(test_process_executor_integration
+        src/tests/integration/test_process_executor_integration.cpp
     )
-    target_link_libraries(test_process_manager PRIVATE anvil_backend)
-    add_test(NAME ProcessManagerTest COMMAND test_process_manager)
+    target_link_libraries(test_process_executor_integration PRIVATE anvil_backend Qt6::Test)
+    add_test(NAME ProcessExecutorIntegrationTest COMMAND test_process_executor_integration)
 
     message(STATUS "")
     message(STATUS "Testing enabled. Run tests with: ctest --output-on-failure")
