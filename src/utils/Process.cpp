@@ -99,9 +99,10 @@ namespace Anvil::Utils
     }
 
     ProcessResult ProcessExecutor::executeShell(const QString &command,
-                                                const QString &workingDir)
+                                                const QString &workingDir,
+                                                int timeoutMs)
     {
-        return execute("/bin/bash", QStringList() << "-c" << command, workingDir);
+        return execute("/bin/bash", QStringList() << "-c" << command, workingDir, timeoutMs);
     }
 
     bool ProcessExecutor::programExists(const QString &program)
