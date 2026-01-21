@@ -85,6 +85,8 @@ namespace Anvil::Utils
     private:
         QProcess *m_process;
         QStringList m_environment;
+        QString m_stdoutBuffer;
+        QString m_stderrBuffer;
 
         void setupProcess(const QString &workingDir);
         QString escapeShellArgument(const QString &arg) const;
