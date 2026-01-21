@@ -34,6 +34,12 @@ namespace Anvil::Core
         return instance;
     }
 
+    bool ConfigManager::isInitialized() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_initialized;
+    }
+
     bool ConfigManager::initialize()
     {
         QMutexLocker locker(&m_mutex);
@@ -115,6 +121,42 @@ namespace Anvil::Core
     }
 
     // Getters and Setters
+    QString ConfigManager::anvilPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_anvilPath;
+    }
+
+    QString ConfigManager::phpPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_phpPath;
+    }
+
+    QString ConfigManager::nginxPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_nginxPath;
+    }
+
+    QString ConfigManager::dataPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_dataPath;
+    }
+
+    QString ConfigManager::logsPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_logsPath;
+    }
+
+    QString ConfigManager::sitesPath() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_sitesPath;
+    }
+
     QString ConfigManager::defaultPhpVersion() const
     {
         QMutexLocker locker(&m_mutex);
@@ -297,6 +339,12 @@ namespace Anvil::Core
         }
     }
 
+    int ConfigManager::nginxPort() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_nginxPort;
+    }
+
     void ConfigManager::setNginxPort(int port)
     {
         bool changed = false;
@@ -315,6 +363,12 @@ namespace Anvil::Core
             LOG_INFO(QString("Nginx port set to: %1").arg(port));
             save();
         }
+    }
+
+    int ConfigManager::nginxSslPort() const
+    {
+        QMutexLocker locker(&m_mutex);
+        return m_nginxSslPort;
     }
 
     void ConfigManager::setNginxSslPort(int port)
