@@ -10,6 +10,11 @@
 
 namespace Anvil
 {
+    namespace Core
+    {
+        class ServiceManager;
+    }
+
     namespace Services
     {
         class NginxService;
@@ -115,6 +120,8 @@ namespace Anvil
             QJsonObject sitesToJson() const;
             void sitesFromJson(const QJsonObject &json);
 
+            Anvil::Core::ServiceManager *serviceManager() const;
+
             // Service accessors
             Services::NginxService *nginxService() const;
             Services::DatabaseService *databaseService() const;
@@ -129,5 +136,4 @@ namespace Anvil
         };
     }
 }
-
 #endif

@@ -1006,6 +1006,8 @@ private:
     QLineEdit *m_sitePathInput;
     QLineEdit *m_siteDomainInput;
     QLineEdit *m_dbNameInput;
+    QLineEdit *m_siteIdInput;
+    QComboBox *m_siteVersionCombo;
 
     QThread *m_initThread;
     InitWorker *m_worker;

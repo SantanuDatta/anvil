@@ -4,330 +4,327 @@
 #include <QThread>
 #include <QDateTime>
 
-namespace Anvil
+namespace Anvil::Services
 {
-    namespace Services
+    BaseService::BaseService(const QString &name, QObject *parent)
+        : QObject(parent), m_name(name), m_displayName(name), m_enabled(true), m_autoStart(false), m_status(name), m_process(new Utils::ServiceProcess(name, this)), m_executor(new Utils::ProcessExecutor(this))
     {
-        BaseService::BaseService(const QString &name, QObject *parent)
-            : QObject(parent), m_name(name), m_displayName(name), m_enabled(true), m_autoStart(false), m_status(name), m_process(new Utils::ServiceProcess(name, this)), m_executor(new Utils::ProcessExecutor(this))
-        {
 
-            m_status.setStatus(Models::ServiceStatus::Stopped);
+        m_status.setStatus(Models::ServiceStatus::Stopped);
 
-            // Connect process signals
-            connect(m_process, &Utils::ServiceProcess::started, this, [this]()
-                    {
+        // Connect process signals
+        connect(m_process, &Utils::ServiceProcess::started, this, [this]()
+                {
                 updateStatus(Models::ServiceStatus::Running);
                 emit started(); });
 
-            connect(m_process, &Utils::ServiceProcess::stopped, this, [this]()
-                    {
+        connect(m_process, &Utils::ServiceProcess::stopped, this, [this]()
+                {
                 updateStatus(Models::ServiceStatus::Stopped);
                 emit stopped(); });
 
-            connect(m_process, &Utils::ServiceProcess::crashed, this, [this](const QString &reason)
-                    {
+        connect(m_process, &Utils::ServiceProcess::crashed, this, [this](const QString &reason)
+                {
                 setError(reason);
                 updateStatus(Models::ServiceStatus::Error); });
+    }
+
+    BaseService::~BaseService()
+    {
+        if (m_process && m_process->isRunning())
+        {
+            m_process->stop();
+        }
+    }
+
+    ServiceResult<bool> BaseService::restart()
+    {
+        LOG_INFO(QString("Restarting service: %1").arg(m_name));
+
+        auto stopResult = stop();
+        if (stopResult.isError())
+        {
+            return stopResult;
         }
 
-        BaseService::~BaseService()
+        // Brief pause between stop and start
+        QThread::msleep(500);
+
+        auto startResult = start();
+        if (startResult.isSuccess())
         {
-            if (m_process && m_process->isRunning())
-            {
-                m_process->stop();
-            }
+            emit restarted();
         }
 
-        ServiceResult<bool> BaseService::restart()
+        return startResult;
+    }
+
+    ServiceResult<bool> BaseService::reload()
+    {
+        LOG_INFO(QString("Reloading service: %1").arg(m_name));
+
+        // Default implementation: restart
+        // Services can override for graceful reload
+        return restart();
+    }
+
+    Models::Service BaseService::status() const
+    {
+        return m_status;
+    }
+
+    ServiceResult<QString> BaseService::getConfig() const
+    {
+        QString path = configPath();
+        if (path.isEmpty())
         {
-            LOG_INFO(QString("Restarting service: %1").arg(m_name));
-
-            auto stopResult = stop();
-            if (stopResult.isError())
-            {
-                return stopResult;
-            }
-
-            // Brief pause between stop and start
-            QThread::msleep(500);
-
-            auto startResult = start();
-            if (startResult.isSuccess())
-            {
-                emit restarted();
-            }
-
-            return startResult;
+            return ServiceResult<QString>::Err("Config path not set");
         }
 
-        ServiceResult<bool> BaseService::reload()
+        auto result = Utils::FileSystem::readFile(path);
+        if (result.isError())
         {
-            LOG_INFO(QString("Reloading service: %1").arg(m_name));
-
-            // Default implementation: restart
-            // Services can override for graceful reload
-            return restart();
+            return ServiceResult<QString>::Err(result.error);
         }
 
-        Models::Service BaseService::status() const
+        return ServiceResult<QString>::Ok(result.data);
+    }
+
+    ServiceResult<bool> BaseService::setConfig(const QString &content)
+    {
+        QString path = configPath();
+        if (path.isEmpty())
         {
-            return m_status;
+            return ServiceResult<bool>::Err("Config path not set");
         }
 
-        ServiceResult<QString> BaseService::getConfig() const
+        // Backup current config
+        if (Utils::FileSystem::fileExists(path))
         {
-            QString path = configPath();
-            if (path.isEmpty())
-            {
-                return ServiceResult<QString>::Err("Config path not set");
-            }
-
-            auto result = Utils::FileSystem::readFile(path);
-            if (result.isError())
-            {
-                return ServiceResult<QString>::Err(result.error);
-            }
-
-            return ServiceResult<QString>::Ok(result.data);
+            Utils::FileSystem::createBackup(path);
         }
 
-        ServiceResult<bool> BaseService::setConfig(const QString &content)
+        auto result = Utils::FileSystem::writeFile(path, content);
+        if (result.isError())
         {
-            QString path = configPath();
-            if (path.isEmpty())
-            {
-                return ServiceResult<bool>::Err("Config path not set");
-            }
+            return ServiceResult<bool>::Err(result.error);
+        }
 
-            // Backup current config
-            if (Utils::FileSystem::fileExists(path))
-            {
-                Utils::FileSystem::createBackup(path);
-            }
+        return ServiceResult<bool>::Ok(true);
+    }
 
-            auto result = Utils::FileSystem::writeFile(path, content);
-            if (result.isError())
-            {
-                return ServiceResult<bool>::Err(result.error);
-            }
+    QString BaseService::version() const
+    {
+        return m_version;
+    }
 
+    ServiceResult<QString> BaseService::detectVersion()
+    {
+        // Default implementation - services should override
+        return ServiceResult<QString>::Err("Version detection not implemented");
+    }
+
+    ServiceResult<bool> BaseService::executeCommand(const QString &command,
+                                                    const QStringList &args) const
+    {
+        Utils::ProcessResult result = m_executor->execute(command, args);
+
+        if (result.isSuccess())
+        {
             return ServiceResult<bool>::Ok(true);
         }
 
-        QString BaseService::version() const
+        // Provide better error message
+        QString errorMsg = result.error.isEmpty()
+                               ? QString("Command failed with exit code %1").arg(result.exitCode)
+                               : result.error;
+
+        return ServiceResult<bool>::Err(errorMsg);
+    }
+
+    ServiceResult<bool> BaseService::executeAsRoot(const QString &command,
+                                                   const QStringList &args) const
+    {
+        // ============================================================
+        // SECURITY: Command Whitelist
+        // ============================================================
+        // Only these commands are allowed to run with root privileges
+        static const QSet<QString> ALLOWED_COMMANDS = {
+            // Package managers
+            "apt", "apt-get", "dpkg",
+            "dnf", "yum", "rpm",
+            "pacman",
+            "zypper",
+
+            // System control
+            "systemctl",
+            "service",
+
+            // File operations (restricted)
+            "mv",
+            "cp",
+            "chown",
+            "chmod",
+            "mkdir",
+            "rm",
+            "ln",
+
+            // Certificate management
+            "openssl",
+            "certbot",
+
+            // User/group management
+            "usermod",
+            "groupadd",
+
+            // Repository management
+            "add-apt-repository"};
+
+        // Validate command is in whitelist
+        if (!ALLOWED_COMMANDS.contains(command))
         {
-            return m_version;
+            QString error = QString("Security Error: Command '%1' is not whitelisted for root execution")
+                                .arg(command);
+            LOG_ERROR(error);
+            return ServiceResult<bool>::Err(error);
         }
 
-        ServiceResult<QString> BaseService::detectVersion()
+        // ============================================================
+        // SECURITY: Argument Sanitization
+        // ============================================================
+        for (const QString &arg : args)
         {
-            // Default implementation - services should override
-            return ServiceResult<QString>::Err("Version detection not implemented");
-        }
-
-        ServiceResult<bool> BaseService::executeCommand(const QString &command,
-                                                        const QStringList &args) const
-        {
-            Utils::ProcessResult result = m_executor->execute(command, args);
-
-            if (result.isSuccess())
+            // Check for command injection characters
+            if (arg.contains(';') || arg.contains('|') || arg.contains('&') ||
+                arg.contains('`') || arg.contains('$') || arg.contains('\n') ||
+                arg.contains('\r'))
             {
-                return ServiceResult<bool>::Ok(true);
-            }
-
-            // Provide better error message
-            QString errorMsg = result.error.isEmpty()
-                                   ? QString("Command failed with exit code %1").arg(result.exitCode)
-                                   : result.error;
-
-            return ServiceResult<bool>::Err(errorMsg);
-        }
-
-        ServiceResult<bool> BaseService::executeAsRoot(const QString &command,
-                                                       const QStringList &args) const
-        {
-            // ============================================================
-            // SECURITY: Command Whitelist
-            // ============================================================
-            // Only these commands are allowed to run with root privileges
-            static const QSet<QString> ALLOWED_COMMANDS = {
-                // Package managers
-                "apt", "apt-get", "dpkg",
-                "dnf", "yum", "rpm",
-                "pacman",
-                "zypper",
-
-                // System control
-                "systemctl",
-                "service",
-
-                // File operations (restricted)
-                "mv",
-                "cp",
-                "chown",
-                "chmod",
-                "mkdir",
-                "rm",
-                "ln",
-
-                // Certificate management
-                "openssl",
-                "certbot",
-
-                // User/group management
-                "usermod",
-                "groupadd",
-
-                // Repository management
-                "add-apt-repository"};
-
-            // Validate command is in whitelist
-            if (!ALLOWED_COMMANDS.contains(command))
-            {
-                QString error = QString("Security Error: Command '%1' is not whitelisted for root execution")
-                                    .arg(command);
+                QString error = QString("Security Error: Argument contains forbidden characters: %1")
+                                    .arg(arg);
                 LOG_ERROR(error);
                 return ServiceResult<bool>::Err(error);
             }
 
-            // ============================================================
-            // SECURITY: Argument Sanitization
-            // ============================================================
-            for (const QString &arg : args)
+            // Check for shell expansion
+            if (arg.contains("$(") || arg.contains("${"))
             {
-                // Check for command injection characters
-                if (arg.contains(';') || arg.contains('|') || arg.contains('&') ||
-                    arg.contains('`') || arg.contains('$') || arg.contains('\n') ||
-                    arg.contains('\r'))
+                QString error = QString("Security Error: Argument contains shell expansion: %1")
+                                    .arg(arg);
+                LOG_ERROR(error);
+                return ServiceResult<bool>::Err(error);
+            }
+
+            // Check for path traversal (only for file operations)
+            static const QSet<QString> FILE_OPS = {"mv", "cp", "rm", "chown", "chmod"};
+            if (FILE_OPS.contains(command))
+            {
+                // Allow absolute paths and relative paths, but block traversal
+                if (arg.contains(".."))
                 {
-                    QString error = QString("Security Error: Argument contains forbidden characters: %1")
+                    QString error = QString("Security Error: Path traversal detected: %1")
                                         .arg(arg);
                     LOG_ERROR(error);
                     return ServiceResult<bool>::Err(error);
                 }
-
-                // Check for shell expansion
-                if (arg.contains("$(") || arg.contains("${"))
-                {
-                    QString error = QString("Security Error: Argument contains shell expansion: %1")
-                                        .arg(arg);
-                    LOG_ERROR(error);
-                    return ServiceResult<bool>::Err(error);
-                }
-
-                // Check for path traversal (only for file operations)
-                static const QSet<QString> FILE_OPS = {"mv", "cp", "rm", "chown", "chmod"};
-                if (FILE_OPS.contains(command))
-                {
-                    // Allow absolute paths and relative paths, but block traversal
-                    if (arg.contains(".."))
-                    {
-                        QString error = QString("Security Error: Path traversal detected: %1")
-                                            .arg(arg);
-                        LOG_ERROR(error);
-                        return ServiceResult<bool>::Err(error);
-                    }
-                }
             }
-
-            // ============================================================
-            // SECURITY: Log audit trail
-            // ============================================================
-            LOG_INFO(QString("ROOT COMMAND: %1 %2").arg(command, args.join(" ")));
-
-            // ============================================================
-            // Execute with pkexec (GUI password prompt)
-            // ============================================================
-            Utils::ProcessResult result = m_executor->executeAsRoot(command, args);
-
-            if (result.isSuccess())
-            {
-                LOG_DEBUG(QString("Root command completed successfully: %1").arg(command));
-                return ServiceResult<bool>::Ok(true);
-            }
-
-            // Enhanced error message
-            QString errorMsg = result.error.isEmpty()
-                                   ? QString("Command failed with exit code %1").arg(result.exitCode)
-                                   : result.error;
-
-            LOG_ERROR(QString("Root command failed: %1 - %2").arg(command, errorMsg));
-            return ServiceResult<bool>::Err(errorMsg);
         }
 
-        ServiceResult<QString> BaseService::executeAndCapture(const QString &command,
-                                                              const QStringList &args) const
+        // ============================================================
+        // SECURITY: Log audit trail
+        // ============================================================
+        LOG_INFO(QString("ROOT COMMAND: %1 %2").arg(command, args.join(" ")));
+
+        // ============================================================
+        // Execute with pkexec (GUI password prompt)
+        // ============================================================
+        Utils::ProcessResult result = m_executor->executeAsRoot(command, args);
+
+        if (result.isSuccess())
         {
-            Utils::ProcessResult result = m_executor->execute(command, args);
-
-            if (result.isSuccess())
-            {
-                return ServiceResult<QString>::Ok(result.output);
-            }
-
-            // Provide better error message with output
-            QString errorMsg;
-            if (!result.error.isEmpty())
-            {
-                errorMsg = result.error;
-            }
-            else if (!result.output.isEmpty())
-            {
-                errorMsg = result.output;
-            }
-            else
-            {
-                errorMsg = QString("Command failed with exit code %1").arg(result.exitCode);
-            }
-
-            return ServiceResult<QString>::Err(errorMsg);
+            LOG_DEBUG(QString("Root command completed successfully: %1").arg(command));
+            return ServiceResult<bool>::Ok(true);
         }
 
-        bool BaseService::checkProgramExists(const QString &program) const
+        // Enhanced error message
+        QString errorMsg = result.error.isEmpty()
+                               ? QString("Command failed with exit code %1").arg(result.exitCode)
+                               : result.error;
+
+        LOG_ERROR(QString("Root command failed: %1 - %2").arg(command, errorMsg));
+        return ServiceResult<bool>::Err(errorMsg);
+    }
+
+    ServiceResult<QString> BaseService::executeAndCapture(const QString &command,
+                                                          const QStringList &args) const
+    {
+        Utils::ProcessResult result = m_executor->execute(command, args);
+
+        if (result.isSuccess())
         {
-            return m_executor->programExists(program);
+            return ServiceResult<QString>::Ok(result.output);
         }
 
-        QString BaseService::getProgramPath(const QString &program) const
+        // Provide better error message with output
+        QString errorMsg;
+        if (!result.error.isEmpty())
         {
-            return m_executor->programPath(program);
+            errorMsg = result.error;
+        }
+        else if (!result.output.isEmpty())
+        {
+            errorMsg = result.output;
+        }
+        else
+        {
+            errorMsg = QString("Command failed with exit code %1").arg(result.exitCode);
         }
 
-        void BaseService::updateStatus(Models::ServiceStatus status)
-        {
-            m_status.setStatus(status);
+        return ServiceResult<QString>::Err(errorMsg);
+    }
 
-            if (status == Models::ServiceStatus::Running)
+    bool BaseService::checkProgramExists(const QString &program) const
+    {
+        return m_executor->programExists(program);
+    }
+
+    QString BaseService::getProgramPath(const QString &program) const
+    {
+        return m_executor->programPath(program);
+    }
+
+    void BaseService::updateStatus(Models::ServiceStatus status)
+    {
+        m_status.setStatus(status);
+
+        if (status == Models::ServiceStatus::Running)
+        {
+            m_status.setStartedAt(QDateTime::currentDateTime());
+            if (m_process && m_process->isRunning())
             {
-                m_status.setStartedAt(QDateTime::currentDateTime());
-                if (m_process && m_process->isRunning())
-                {
-                    m_status.setPid(m_process->pid());
-                }
-                clearError();
+                m_status.setPid(m_process->pid());
             }
-            else if (status == Models::ServiceStatus::Stopped)
-            {
-                m_status.setPid(0);
-            }
-
-            m_status.setVersion(m_version);
-
-            LOG_DEBUG(QString("Service %1 status: %2").arg(m_name, m_status.statusString()));
-            emit statusChanged(m_status);
+            clearError();
         }
-
-        void BaseService::setError(const QString &error)
+        else if (status == Models::ServiceStatus::Stopped)
         {
-            m_status.setErrorMessage(error);
-            LOG_ERROR(QString("Service %1 error: %2").arg(m_name, error));
-            emit errorOccurred(error);
+            m_status.setPid(0);
         }
 
-        void BaseService::clearError()
-        {
-            m_status.setErrorMessage(QString());
-        }
+        m_status.setVersion(m_version);
+
+        LOG_DEBUG(QString("Service %1 status: %2").arg(m_name, m_status.statusString()));
+        emit statusChanged(m_status);
+    }
+
+    void BaseService::setError(const QString &error)
+    {
+        m_status.setErrorMessage(error);
+        LOG_ERROR(QString("Service %1 error: %2").arg(m_name, error));
+        emit errorOccurred(error);
+    }
+
+    void BaseService::clearError()
+    {
+        m_status.setErrorMessage(QString());
     }
 }

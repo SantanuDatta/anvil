@@ -7,126 +7,119 @@
 #include "models/Service.h"
 #include "utils/Process.h"
 
-namespace Anvil
+namespace Anvil::Services
 {
-    namespace Services
+    template <typename T>
+    struct ServiceResult
     {
+        bool success;
+        T data;
+        QString error;
 
-        // Result type for service operations
-        template <typename T>
-        struct ServiceResult
+        static ServiceResult<T> Ok(const T &data)
         {
-            bool success;
-            T data;
-            QString error;
+            return {true, data, QString()};
+        }
 
-            static ServiceResult<T> Ok(const T &data)
-            {
-                return {true, data, QString()};
-            }
-
-            static ServiceResult<T> Err(const QString &error)
-            {
-                return {false, T(), error};
-            }
-
-            bool isSuccess() const { return success; }
-            bool isError() const { return !success; }
-        };
-
-        // Base class for all services
-        class BaseService : public QObject
+        static ServiceResult<T> Err(const QString &error)
         {
-            Q_OBJECT
+            return {false, T(), error};
+        }
 
-        public:
-            explicit BaseService(const QString &name, QObject *parent = nullptr);
-            virtual ~BaseService();
+        bool isSuccess() const { return success; }
+        bool isError() const { return !success; }
+    };
 
-            // Service identification
-            QString name() const { return m_name; }
-            QString displayName() const { return m_displayName; }
-            QString description() const { return m_description; }
+    // Base class for all services
+    class BaseService : public QObject
+    {
+        Q_OBJECT
 
-            // Service lifecycle
-            virtual ServiceResult<bool> start() = 0;
-            virtual ServiceResult<bool> stop() = 0;
-            virtual ServiceResult<bool> restart();
-            virtual ServiceResult<bool> reload();
+    public:
+        explicit BaseService(const QString &name, QObject *parent = nullptr);
+        virtual ~BaseService();
 
-            // Service status
-            virtual bool isInstalled() const = 0;
-            virtual bool isRunning() const = 0;
-            virtual Models::Service status() const;
+        // Service identification
+        QString name() const { return m_name; }
+        QString displayName() const { return m_displayName; }
+        QString description() const { return m_description; }
 
-            // Installation
-            virtual ServiceResult<bool> install() = 0;
-            virtual ServiceResult<bool> uninstall() = 0;
+        // Service lifecycle
+        virtual ServiceResult<bool> start() = 0;
+        virtual ServiceResult<bool> stop() = 0;
+        virtual ServiceResult<bool> restart();
+        virtual ServiceResult<bool> reload();
 
-            // Configuration
-            virtual ServiceResult<bool> configure() = 0;
-            virtual QString configPath() const = 0;
-            virtual ServiceResult<QString> getConfig() const;
-            virtual ServiceResult<bool> setConfig(const QString &content);
+        // Service status
+        virtual bool isInstalled() const = 0;
+        virtual bool isRunning() const = 0;
+        virtual Models::Service status() const;
 
-            // Version info
-            virtual QString version() const;
-            virtual ServiceResult<QString> detectVersion();
+        // Installation
+        virtual ServiceResult<bool> install() = 0;
+        virtual ServiceResult<bool> uninstall() = 0;
 
-            // Enable/disable
-            void setEnabled(bool enabled) { m_enabled = enabled; }
-            bool isEnabled() const { return m_enabled; }
+        // Configuration
+        virtual ServiceResult<bool> configure() = 0;
+        virtual QString configPath() const = 0;
+        virtual ServiceResult<QString> getConfig() const;
+        virtual ServiceResult<bool> setConfig(const QString &content);
 
-            // Auto-start
-            void setAutoStart(bool autoStart) { m_autoStart = autoStart; }
-            bool autoStart() const { return m_autoStart; }
+        // Version info
+        virtual QString version() const;
+        virtual ServiceResult<QString> detectVersion();
 
-        signals:
-            void started();
-            void stopped();
-            void restarted();
-            void statusChanged(const Models::Service &status);
-            void errorOccurred(const QString &error);
-            void outputReceived(const QString &output);
+        // Enable/disable
+        void setEnabled(bool enabled) { m_enabled = enabled; }
+        bool isEnabled() const { return m_enabled; }
 
-        protected:
-            // Helper methods for derived classes
-            ServiceResult<bool> executeCommand(const QString &command,
-                                               const QStringList &args = QStringList()) const;
-            ServiceResult<bool> executeAsRoot(const QString &command,
-                                              const QStringList &args = QStringList()) const;
-            ServiceResult<QString> executeAndCapture(const QString &command,
-                                                     const QStringList &args = QStringList()) const;
+        // Auto-start
+        void setAutoStart(bool autoStart) { m_autoStart = autoStart; }
+        bool autoStart() const { return m_autoStart; }
 
-            bool checkProgramExists(const QString &program) const;
-            QString getProgramPath(const QString &program) const;
+    signals:
+        void started();
+        void stopped();
+        void restarted();
+        void statusChanged(const Models::Service &status);
+        void errorOccurred(const QString &error);
+        void outputReceived(const QString &output);
 
-            // Process management
-            Utils::ServiceProcess *process() { return m_process; }
-            const Utils::ServiceProcess *process() const { return m_process; }
+    protected:
+        // Helper methods for derived classes
+        ServiceResult<bool> executeCommand(const QString &command,
+                                           const QStringList &args = QStringList()) const;
+        ServiceResult<bool> executeAsRoot(const QString &command,
+                                          const QStringList &args = QStringList()) const;
+        ServiceResult<QString> executeAndCapture(const QString &command,
+                                                 const QStringList &args = QStringList()) const;
 
-            void setDisplayName(const QString &name) { m_displayName = name; }
-            void setDescription(const QString &desc) { m_description = desc; }
-            void setVersion(const QString &version) { m_version = version; }
+        bool checkProgramExists(const QString &program) const;
+        QString getProgramPath(const QString &program) const;
 
-            void updateStatus(Models::ServiceStatus status);
-            void setError(const QString &error);
-            void clearError();
+        // Process management
+        Utils::ServiceProcess *process() { return m_process; }
+        const Utils::ServiceProcess *process() const { return m_process; }
 
-        private:
-            QString m_name;
-            QString m_displayName;
-            QString m_description;
-            QString m_version;
-            bool m_enabled;
-            bool m_autoStart;
+        void setDisplayName(const QString &name) { m_displayName = name; }
+        void setDescription(const QString &desc) { m_description = desc; }
+        void setVersion(const QString &version) { m_version = version; }
 
-            Models::Service m_status;
-            Utils::ServiceProcess *m_process;
-            Utils::ProcessExecutor *m_executor;
-        };
+        void updateStatus(Models::ServiceStatus status);
+        void setError(const QString &error);
+        void clearError();
 
-    }
+    private:
+        QString m_name;
+        QString m_displayName;
+        QString m_description;
+        QString m_version;
+        bool m_enabled;
+        bool m_autoStart;
+
+        Models::Service m_status;
+        Utils::ServiceProcess *m_process;
+        Utils::ProcessExecutor *m_executor;
+    };
 }
-
 #endif

@@ -190,6 +190,7 @@ Anvil/
 │   │       └── templates/       # Config templates
 │   │
 │   ├── ui/                      # User Interface (TODO)
+│   │   ├── Theme.h/cpp          # Theme system interface & imeplementation
 │   │   ├── MainWindow.h/cpp     # Main application window
 │   │   ├── TrayIcon.h/cpp       # System tray integration
 │   │   └── dialogs/
