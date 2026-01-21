@@ -270,15 +270,15 @@ namespace Anvil::Core
     Models::Service ServiceManager::serviceStatus(const QString &name) const
     {
         if (name == "php")
-            return m_php->status();
+            return m_php ? m_php->status() : Models::Service(name);
         if (name == "nginx")
-            return m_nginx->status();
+            return m_nginx ? m_nginx->status() : Models::Service(name);
         if (name == "database")
-            return m_database->status();
+            return m_database ? m_database->status() : Models::Service(name);
         if (name == "dns")
-            return m_dns->status();
+            return m_dns ? m_dns->status() : Models::Service(name);
         if (name == "node")
-            return m_node->status();
+            return m_node ? m_node->status() : Models::Service(name);
 
         return Models::Service(name);
     }
