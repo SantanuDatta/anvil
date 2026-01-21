@@ -22,13 +22,21 @@ namespace Anvil::Utils
         // Setup signal connections
         connect(m_process, &QProcess::readyReadStandardOutput, this, [this]()
                 {
-                QString output = m_process->readAllStandardOutput();
-                emit outputReceived(output); });
+                const QString output = m_process->readAllStandardOutput();
+                if (!output.isEmpty())
+                {
+                    m_stdoutBuffer.append(output);
+                    emit outputReceived(output);
+                } });
 
         connect(m_process, &QProcess::readyReadStandardError, this, [this]()
                 {
-                QString error = m_process->readAllStandardError();
-                emit errorReceived(error); });
+                const QString error = m_process->readAllStandardError();
+                if (!error.isEmpty())
+                {
+                    m_stderrBuffer.append(error);
+                    emit errorReceived(error);
+                } });
 
         connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
                 this, [this](int exitCode, QProcess::ExitStatus)
@@ -55,6 +63,8 @@ namespace Anvil::Utils
     {
         LOG_DEBUG(QString("Executing: %1 %2").arg(program, arguments.join(" ")));
 
+        m_stdoutBuffer.clear();
+        m_stderrBuffer.clear();
         setupProcess(workingDir);
 
         m_process->start(program, arguments);
@@ -75,8 +85,10 @@ namespace Anvil::Utils
         }
 
         int exitCode = m_process->exitCode();
-        QString output = m_process->readAllStandardOutput();
-        QString errorOutput = m_process->readAllStandardError();
+        m_stdoutBuffer.append(m_process->readAllStandardOutput());
+        m_stderrBuffer.append(m_process->readAllStandardError());
+        QString output = m_stdoutBuffer;
+        QString errorOutput = m_stderrBuffer;
 
         if (exitCode != 0)
         {
