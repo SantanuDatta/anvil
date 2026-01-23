@@ -11,6 +11,7 @@
 #include <QScrollArea>
 #include <QTimer>
 #include <QDebug>
+#include <QResource>
 #include <QThread>
 #include <QtConcurrent>
 #include "utils/Logger.h"
@@ -1035,6 +1036,8 @@ int main(int argc, char *argv[])
 
     app.setOrganizationName("Anvil");
     app.setApplicationName("Anvil");
+
+    Q_INIT_RESOURCE(resources);
 
     Utils::Logger::instance().setConsoleOutput(true);
     Utils::Logger::instance().setLogLevel(Utils::LogLevel::Info);
