@@ -74,6 +74,7 @@ add_library(anvil_ui STATIC
     src/ui/Theme.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/resources.qrc
 )
 
 target_link_libraries(anvil_ui PUBLIC

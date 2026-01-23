@@ -10,6 +10,19 @@
 
 namespace Anvil::UI
 {
+    namespace
+    {
+        void ensureUiResourcesLoaded()
+        {
+            static bool loaded = false;
+            if (!loaded)
+            {
+                Q_INIT_RESOURCE(resources);
+                loaded = true;
+            }
+        }
+    }
+
     Theme &Theme::instance()
     {
         static Theme instance;
@@ -18,6 +31,8 @@ namespace Anvil::UI
 
     Theme::Theme() : m_mode(ThemeMode::Auto), m_isDark(false)
     {
+        ensureUiResourcesLoaded();
+
         // Load saved theme preference
         QSettings settings("Anvil", "Anvil");
         int savedMode = settings.value("theme/mode", static_cast<int>(ThemeMode::Auto)).toInt();
