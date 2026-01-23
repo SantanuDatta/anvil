@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QResource>
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -11,7 +12,6 @@
 #include <QScrollArea>
 #include <QTimer>
 #include <QDebug>
-#include <QResource>
 #include <QThread>
 #include <QtConcurrent>
 #include "utils/Logger.h"
@@ -1034,10 +1034,10 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
+    Q_INIT_RESOURCE(resources);
+
     app.setOrganizationName("Anvil");
     app.setApplicationName("Anvil");
-
-    Q_INIT_RESOURCE(resources);
 
     Utils::Logger::instance().setConsoleOutput(true);
     Utils::Logger::instance().setLogLevel(Utils::LogLevel::Info);

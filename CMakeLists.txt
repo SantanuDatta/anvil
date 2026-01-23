@@ -96,7 +96,6 @@ target_include_directories(anvil_ui PUBLIC
 # ============================================================================
 add_executable(Anvil
     src/main.cpp
-    src/ui/resources.qrc
 )
 
 target_link_libraries(Anvil PRIVATE
