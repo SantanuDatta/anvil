@@ -10,6 +10,19 @@
 
 namespace Anvil::UI
 {
+    namespace
+    {
+        void ensureUiResourcesLoaded()
+        {
+            static bool loaded = false;
+            if (!loaded)
+            {
+                Q_INIT_RESOURCE(resources);
+                loaded = true;
+            }
+        }
+    }
+
     Theme &Theme::instance()
     {
         static Theme instance;
@@ -18,6 +31,8 @@ namespace Anvil::UI
 
     Theme::Theme() : m_mode(ThemeMode::Auto), m_isDark(false)
     {
+        ensureUiResourcesLoaded();
+
         // Load saved theme preference
         QSettings settings("Anvil", "Anvil");
         int savedMode = settings.value("theme/mode", static_cast<int>(ThemeMode::Auto)).toInt();
@@ -246,6 +261,8 @@ namespace Anvil::UI
         QString successColor = success().name();
         QString warningColor = warning().name();
         QString errorColor = error().name();
+        QString comboIcon = m_isDark ? ":/icons/chevrons-up-down-dark.svg"
+                                     : ":/icons/chevrons-up-down-light.svg";
 
         return QString(R"(
         /* Global Application Style */
@@ -363,6 +380,14 @@ namespace Anvil::UI
         QComboBox::drop-down {
             border: none;
             width: 28px;
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+        }
+
+        QComboBox::down-arrow {
+            image: url(%13);
+            width: 16px;
+            height: 16px;
         }
 
         QComboBox QAbstractItemView {
@@ -372,6 +397,17 @@ namespace Anvil::UI
             selection-background-color: %8;
             color: %1;
             padding: 4px;
+            outline: none;
+        }
+
+        QComboBox QAbstractItemView::item {
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+
+        QComboBox QAbstractItemView::item:selected {
+            background-color: %8;
+            color: %1;
         }
 
         /* Labels */
@@ -515,6 +551,7 @@ namespace Anvil::UI
             .arg(secondaryColor) // %9 - secondary
             .arg(mutedFg)        // %10 - muted foreground
             .arg(successColor)   // %11 - success
-            .arg(errorColor);    // %12 - error
+            .arg(errorColor)     // %12 - error
+            .arg(comboIcon);     // %13 - combobox icon
     }
 }

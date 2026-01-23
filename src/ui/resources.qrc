@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="chevrons-up-down-dark.svg">../utils/resources/icons/chevrons-up-down-dark.svg</file>
+        <file alias="chevrons-up-down-light.svg">../utils/resources/icons/chevrons-up-down-light.svg</file>
+    </qresource>
+</RCC>
