@@ -272,7 +272,7 @@ namespace Anvil::UI
 
         QListWidget#sidebar::item {
             color: %4;
-            padding: 12px 16px;
+            padding: 8px 12px;
             border-radius: 6px;
             margin: 2px 0;
         }
@@ -351,8 +351,8 @@ namespace Anvil::UI
             background-color: %2;
             border: 1px solid %7;
             border-radius: 6px;
-            padding: 4px 6px;
-            min-height: 36px;
+            padding: 4px 8px;
+            min-height: 26px;
             color: %1;
         }
 
@@ -362,7 +362,7 @@ namespace Anvil::UI
 
         QComboBox::drop-down {
             border: none;
-            width: 30px;
+            width: 28px;
         }
 
         QComboBox QAbstractItemView {

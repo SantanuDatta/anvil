@@ -101,7 +101,7 @@ namespace Anvil::UI
     {
         m_dashboardPage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_dashboardPage);
-        layout->setContentsMargins(32, 32, 32, 32);
+        layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
         QLabel *title = new QLabel("Dashboard");
@@ -164,7 +164,7 @@ namespace Anvil::UI
     {
         m_generalPage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_generalPage);
-        layout->setContentsMargins(32, 32, 32, 32);
+        layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
         QLabel *title = new QLabel("General Settings");
@@ -192,7 +192,7 @@ namespace Anvil::UI
     {
         m_sitesPage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_sitesPage);
-        layout->setContentsMargins(32, 32, 32, 32);
+        layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
         QHBoxLayout *header = new QHBoxLayout();
@@ -234,7 +234,7 @@ namespace Anvil::UI
     {
         m_phpPage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_phpPage);
-        layout->setContentsMargins(32, 32, 32, 32);
+        layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
         QLabel *title = new QLabel("PHP Versions");
@@ -288,8 +288,8 @@ namespace Anvil::UI
     {
         m_nodePage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_nodePage);
-        layout->setContentsMargins(32, 32, 32, 32);
-        layout->setSpacing(24);
+        layout->setContentsMargins(24, 24, 24, 24);
+        layout->setSpacing(18);
 
         QLabel *title = new QLabel("Node.js Versions");
         title->setProperty("class", "heading");
@@ -311,8 +311,8 @@ namespace Anvil::UI
     {
         m_settingsPage = new QWidget();
         QVBoxLayout *layout = new QVBoxLayout(m_settingsPage);
-        layout->setContentsMargins(32, 32, 32, 32);
-        layout->setSpacing(24);
+        layout->setContentsMargins(24, 24, 24, 24);
+        layout->setSpacing(18);
 
         QLabel *title = new QLabel("Settings");
         title->setProperty("class", "heading");
@@ -345,8 +345,8 @@ namespace Anvil::UI
         card->setFrameShape(QFrame::StyledPanel);
 
         QVBoxLayout *layout = new QVBoxLayout(card);
-        layout->setContentsMargins(20, 20, 20, 20);
-        layout->setSpacing(16);
+        layout->setContentsMargins(10, 10, 10, 10);
+        layout->setSpacing(12);
 
         if (!title.isEmpty())
         {
