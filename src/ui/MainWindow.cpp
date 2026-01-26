@@ -536,13 +536,19 @@ namespace Anvil::UI
         {
             for (const auto &path : result.data)
             {
-                m_pathsList->addItem(path);
+                QString trimmedPath = path.trimmed();
+                if (trimmedPath.isEmpty())
+                {
+                    continue;
+                }
+
+                m_pathsList->addItem(trimmedPath);
             }
         }
 
         if (m_pathsList->count() == 0)
         {
-            auto *item = new QListWidgetItem("No project paths added yet");
+            auto *item = new QListWidgetItem("No path available. Add a new path to get started.");
             item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
             m_pathsList->addItem(item);
         }
