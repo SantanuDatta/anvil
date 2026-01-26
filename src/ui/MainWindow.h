@@ -46,6 +46,7 @@ namespace Anvil::UI
         void onThemeModeChanged(int index);
         void onInstallPhpVersion();
         void onSwitchPhpVersion();
+        void onAddPathClicked();
 
     private:
         void setupUi();
@@ -65,6 +66,7 @@ namespace Anvil::UI
         void updateServiceIndicators();
         void updatePhpVersionCombo();
         void updateSitesTable();
+        void updateParkedPaths();
         void showError(const QString &title, const QString &message);
         void showSuccess(const QString &title, const QString &message);
 
@@ -91,6 +93,8 @@ namespace Anvil::UI
         QTableWidget *m_sitesTable;
         QPushButton *m_addSiteBtn;
         QPushButton *m_removeSiteBtn;
+        QListWidget *m_pathsList;
+        QPushButton *m_addPathBtn;
 
         QLabel *m_phpCurrentVersion;
         QComboBox *m_phpInstallCombo;
