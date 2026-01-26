@@ -103,8 +103,12 @@ namespace Anvil::Managers
 
         if (!sm->isInitialized())
         {
-            LOG_ERROR("ServiceManager not initialized");
-            return false;
+            LOG_INFO("ServiceManager not initialized, attempting to initialize");
+            if (!sm->initialize())
+            {
+                LOG_ERROR("ServiceManager failed to initialize");
+                return false;
+            }
         }
 
         // Load existing sites
