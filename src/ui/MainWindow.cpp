@@ -123,8 +123,8 @@ namespace Anvil::UI
 
         QWidget *indicatorsContainer = new QWidget();
         QVBoxLayout *indicatorsLayout = new QVBoxLayout(indicatorsContainer);
-        indicatorsLayout->setSpacing(12);
-        indicatorsLayout->setContentsMargins(0, 16, 0, 0);
+        indicatorsLayout->setSpacing(6);
+        indicatorsLayout->setContentsMargins(0, 12, 0, 0);
 
         const QStringList services = {"nginx", "php", "mysql", "node"};
         for (const QString &service : services)
