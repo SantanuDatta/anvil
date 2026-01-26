@@ -8,25 +8,6 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-option(ANVIL_ENABLE_VULKAN "Enable Vulkan support in Qt (requires Vulkan headers)" ON)
-
-if(ANVIL_ENABLE_VULKAN)
-    find_package(Vulkan QUIET)
-    if(Vulkan_FOUND AND NOT Vulkan_INCLUDE_DIR AND Vulkan_INCLUDE_DIRS)
-        set(Vulkan_INCLUDE_DIR "${Vulkan_INCLUDE_DIRS}")
-    endif()
-    if(Vulkan_FOUND)
-        set(QT_FEATURE_vulkan ON CACHE BOOL "Enable Vulkan support in Qt" FORCE)
-    endif()
-else()
-    set(QT_FEATURE_vulkan OFF CACHE BOOL "Disable Vulkan support in Qt" FORCE)
-endif()
-
-if(ANVIL_ENABLE_VULKAN AND NOT Vulkan_FOUND)
-    message(STATUS "Vulkan headers not found; disabling Vulkan support in Qt.")
-    set(QT_FEATURE_vulkan OFF CACHE BOOL "Disable Vulkan support in Qt" FORCE)
-endif()
-
 find_package(Qt6 REQUIRED COMPONENTS
     Core
     Gui
