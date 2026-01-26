@@ -399,6 +399,7 @@ namespace Anvil::Managers
 
     void ProcessManager::setupServiceProcess(const QString &serviceName, Utils::ServiceProcess *process)
     {
+        LOG_DEBUG(QString("Setting up service process: %1").arg(serviceName));
         connect(process, &Utils::ServiceProcess::started, this, &ProcessManager::onServiceStarted);
         connect(process, &Utils::ServiceProcess::stopped, this, &ProcessManager::onServiceStopped);
         connect(process, &Utils::ServiceProcess::crashed, this, &ProcessManager::onServiceCrashed);

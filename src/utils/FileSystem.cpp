@@ -682,7 +682,10 @@ namespace Anvil::Utils
     ScopedFile::ScopedFile(const QString &path, QIODevice::OpenMode mode)
         : m_file(path)
     {
-        m_file.open(mode);
+        if (!m_file.open(mode))
+        {
+            LOG_WARNING(QString("Failed to open scoped file: %1").arg(m_file.errorString()));
+        }
     }
 
     ScopedFile::~ScopedFile()
