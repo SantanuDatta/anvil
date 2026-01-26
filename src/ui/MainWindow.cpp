@@ -173,9 +173,6 @@ namespace Anvil::UI
         title->setProperty("class", "heading");
         header->addWidget(title);
         header->addStretch();
-
-        m_addPathBtn = createButton("+ Add Path", "primary");
-        header->addWidget(m_addPathBtn);
         layout->addLayout(header);
 
         QFrame *pathsCard = createCard();
@@ -186,6 +183,8 @@ namespace Anvil::UI
         pathsTitle->setProperty("class", "subheading");
         pathsHeader->addWidget(pathsTitle);
         pathsHeader->addStretch();
+        m_addPathBtn = createButton("+ Add Path", "primary");
+        pathsHeader->addWidget(m_addPathBtn);
         pathsLayout->addLayout(pathsHeader);
 
         m_pathsList = new QListWidget();

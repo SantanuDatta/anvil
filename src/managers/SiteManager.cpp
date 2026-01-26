@@ -12,6 +12,7 @@
 #include <QJsonArray>
 #include <QDir>
 #include <QRegularExpression>
+#include <QSet>
 
 namespace
 {
@@ -760,6 +761,40 @@ namespace Anvil::Managers
         }
 
         sitesFromJson(doc.object());
+
+        if (m_parkedDirectories.isEmpty())
+        {
+            QSet<QString> inferredRoots;
+            for (const Models::Site &site : m_sites.values())
+            {
+                if (!site.isParked())
+                {
+                    continue;
+                }
+
+                QDir siteDir(site.path());
+                if (siteDir.dirName() == "public")
+                {
+                    siteDir.cdUp();
+                }
+
+                QDir projectDir(siteDir.absolutePath());
+                if (projectDir.cdUp())
+                {
+                    inferredRoots.insert(projectDir.absolutePath());
+                }
+                else
+                {
+                    inferredRoots.insert(siteDir.absolutePath());
+                }
+            }
+
+            if (!inferredRoots.isEmpty())
+            {
+                m_parkedDirectories = QStringList(inferredRoots.begin(), inferredRoots.end());
+                save();
+            }
+        }
         LOG_INFO(QString("Loaded %1 sites").arg(m_sites.size()));
 
         return true;
