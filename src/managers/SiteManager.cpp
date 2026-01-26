@@ -13,6 +13,61 @@
 #include <QDir>
 #include <QRegularExpression>
 
+namespace
+{
+    bool isLaravelApp(const QString &path)
+    {
+        QString artisanPath = Anvil::Utils::FileSystem::joinPath(path, "artisan");
+        QString bootstrapPath = Anvil::Utils::FileSystem::joinPath(path, "bootstrap/app.php");
+        if (Anvil::Utils::FileSystem::fileExists(artisanPath) &&
+            Anvil::Utils::FileSystem::fileExists(bootstrapPath))
+        {
+            return true;
+        }
+
+        QString composerPath = Anvil::Utils::FileSystem::joinPath(path, "composer.json");
+        if (!Anvil::Utils::FileSystem::fileExists(composerPath))
+        {
+            return false;
+        }
+
+        auto result = Anvil::Utils::FileSystem::readFile(composerPath);
+        return result.isSuccess() && result.data.contains("\"laravel/framework\"");
+    }
+
+    bool isPhpApp(const QString &path)
+    {
+        QString indexPath = Anvil::Utils::FileSystem::joinPath(path, "index.php");
+        QString publicIndexPath = Anvil::Utils::FileSystem::joinPath(path, "public/index.php");
+        return Anvil::Utils::FileSystem::fileExists(indexPath) ||
+               Anvil::Utils::FileSystem::fileExists(publicIndexPath);
+    }
+
+    QString resolveDocumentRoot(const QString &path)
+    {
+        if (isLaravelApp(path))
+        {
+            QString publicPath = Anvil::Utils::FileSystem::joinPath(path, "public");
+            if (Anvil::Utils::FileSystem::isDirectory(publicPath))
+            {
+                return publicPath;
+            }
+        }
+
+        QString publicIndexPath = Anvil::Utils::FileSystem::joinPath(path, "public/index.php");
+        if (Anvil::Utils::FileSystem::fileExists(publicIndexPath))
+        {
+            QString publicPath = Anvil::Utils::FileSystem::joinPath(path, "public");
+            if (Anvil::Utils::FileSystem::isDirectory(publicPath))
+            {
+                return publicPath;
+            }
+        }
+
+        return path;
+    }
+}
+
 namespace Anvil::Managers
 {
     SiteManager::SiteManager(QObject *parent)
@@ -433,12 +488,22 @@ namespace Anvil::Managers
         // Create a site for each subdirectory
         for (const QString &subdir : subdirs)
         {
+            bool isLaravel = isLaravelApp(subdir);
+            bool isPhp = isLaravel || isPhpApp(subdir);
+
+            if (!isPhp)
+            {
+                LOG_INFO(QString("Skipping non-PHP project: %1").arg(subdir));
+                continue;
+            }
+
             QString siteName = generateSiteNameFromPath(subdir);
             QString domain = QFileInfo(subdir).fileName() + "." + defaultDomain;
-            QString sitePath = subdir;
+            QString sitePath = resolveDocumentRoot(subdir);
 
             Models::Site site(siteName, sitePath, domain);
             site.setPhpVersion(config.defaultPhpVersion());
+            site.setIsParked(true);
 
             // Create site (failures are logged but don't stop parking)
             auto result = createSite(site);

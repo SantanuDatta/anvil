@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QHeaderView>
+#include <QFileDialog>
+#include <QDir>
 
 namespace Anvil::UI
 {
@@ -174,14 +176,23 @@ namespace Anvil::UI
         QFrame *pathsCard = createCard();
         QVBoxLayout *pathsLayout = qobject_cast<QVBoxLayout *>(pathsCard->layout());
 
+        QHBoxLayout *pathsHeader = new QHBoxLayout();
         QLabel *pathsTitle = new QLabel("Paths");
         pathsTitle->setProperty("class", "subheading");
-        pathsLayout->addWidget(pathsTitle);
+        pathsHeader->addWidget(pathsTitle);
+        pathsHeader->addStretch();
+        m_addPathBtn = createButton("+ Add Path", "secondary");
+        pathsHeader->addWidget(m_addPathBtn);
+        pathsLayout->addLayout(pathsHeader);
 
         Core::ConfigManager &config = Core::ConfigManager::instance();
         pathsLayout->addWidget(new QLabel(QString("Anvil: %1").arg(config.anvilPath())));
         pathsLayout->addWidget(new QLabel(QString("PHP: %1").arg(config.phpPath())));
         pathsLayout->addWidget(new QLabel(QString("Nginx: %1").arg(config.nginxPath())));
+        pathsLayout->addWidget(new QLabel("Project Paths:"));
+        m_pathsList = new QListWidget();
+        m_pathsList->setSelectionMode(QAbstractItemView::NoSelection);
+        pathsLayout->addWidget(m_pathsList);
 
         layout->addWidget(pathsCard);
         layout->addStretch();
@@ -400,6 +411,7 @@ namespace Anvil::UI
         connect(m_themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onThemeModeChanged);
         connect(m_installPhpBtn, &QPushButton::clicked, this, &MainWindow::onInstallPhpVersion);
         connect(m_switchPhpBtn, &QPushButton::clicked, this, &MainWindow::onSwitchPhpVersion);
+        connect(m_addPathBtn, &QPushButton::clicked, this, &MainWindow::onAddPathClicked);
         connect(m_siteManager, &Managers::SiteManager::siteCreated, this, &MainWindow::onSiteCreated);
         connect(m_siteManager, &Managers::SiteManager::siteRemoved, this, &MainWindow::onSiteRemoved);
         connect(m_versionManager, &Managers::VersionManager::globalPhpVersionChanged, this, &MainWindow::onGlobalPhpVersionChanged);
@@ -411,6 +423,7 @@ namespace Anvil::UI
         updateServiceIndicators();
         updatePhpVersionCombo();
         updateSitesTable();
+        updateParkedPaths();
 
         QString currentPhp = m_versionManager->globalPhpVersion();
         m_phpCurrentVersion->setText(QString("PHP %1").arg(currentPhp));
@@ -513,6 +526,27 @@ namespace Anvil::UI
                 m_sitesTable->setItem(row, 2, new QTableWidgetItem(site.path()));
                 m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
             }
+        }
+    }
+
+    void MainWindow::updateParkedPaths()
+    {
+        m_pathsList->clear();
+
+        auto result = m_siteManager->listParkedDirectories();
+        if (result.isSuccess())
+        {
+            for (const auto &path : result.data)
+            {
+                m_pathsList->addItem(path);
+            }
+        }
+
+        if (m_pathsList->count() == 0)
+        {
+            auto *item = new QListWidgetItem("No project paths added yet");
+            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+            m_pathsList->addItem(item);
         }
     }
 
@@ -676,6 +710,26 @@ namespace Anvil::UI
             {
                 showError("Error", QString("Failed to remove site:\n%1").arg(result.error));
             }
+        }
+    }
+
+    void MainWindow::onAddPathClicked()
+    {
+        QString selectedPath = QFileDialog::getExistingDirectory(
+            this, "Select Project Directory", QDir::homePath(), QFileDialog::ShowDirsOnly);
+        if (selectedPath.isEmpty())
+            return;
+
+        auto result = m_siteManager->parkDirectory(selectedPath);
+        if (result.isSuccess())
+        {
+            showSuccess("Path Added", QString("Project path added: %1").arg(selectedPath));
+            updateParkedPaths();
+            updateSitesTable();
+        }
+        else
+        {
+            showError("Error", QString("Failed to add path:\n%1").arg(result.error));
         }
     }
 
