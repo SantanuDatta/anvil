@@ -169,9 +169,15 @@ namespace Anvil::UI
         layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
+        QHBoxLayout *header = new QHBoxLayout();
         QLabel *title = new QLabel("General Settings");
         title->setProperty("class", "heading");
-        layout->addWidget(title);
+        header->addWidget(title);
+        header->addStretch();
+
+        m_addSiteBtn = createButton("+ Add Path", "primary");
+        header->addWidget(m_addPathBtn);
+        layout->addLayout(header);
 
         QFrame *pathsCard = createCard();
         QVBoxLayout *pathsLayout = qobject_cast<QVBoxLayout *>(pathsCard->layout());
@@ -186,10 +192,6 @@ namespace Anvil::UI
         pathsLayout->addLayout(pathsHeader);
 
         Core::ConfigManager &config = Core::ConfigManager::instance();
-        pathsLayout->addWidget(new QLabel(QString("Anvil: %1").arg(config.anvilPath())));
-        pathsLayout->addWidget(new QLabel(QString("PHP: %1").arg(config.phpPath())));
-        pathsLayout->addWidget(new QLabel(QString("Nginx: %1").arg(config.nginxPath())));
-        pathsLayout->addWidget(new QLabel("Project Paths:"));
         m_pathsList = new QListWidget();
         m_pathsList->setSelectionMode(QAbstractItemView::NoSelection);
         pathsLayout->addWidget(m_pathsList);
