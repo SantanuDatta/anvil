@@ -628,10 +628,11 @@ namespace Anvil::UI
             m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
 
             auto *deleteBtn = new QToolButton();
-            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
+            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
             deleteBtn->setToolTip("Delete site");
             deleteBtn->setAutoRaise(true);
             deleteBtn->setCursor(Qt::PointingHandCursor);
+            deleteBtn->setProperty("class", "icon-primary");
             connect(deleteBtn, &QToolButton::clicked, this, [this, row]()
                     {
                         m_sitesTable->setCurrentCell(row, 0);
@@ -773,7 +774,7 @@ namespace Anvil::UI
         if (!m_sitesTable)
             return;
 
-        const QString trashIcon = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+        const QString trashIcon = ":/icons/trash.svg";
         for (int row = 0; row < m_sitesTable->rowCount(); ++row)
         {
             QWidget *cellWidget = m_sitesTable->cellWidget(row, 4);

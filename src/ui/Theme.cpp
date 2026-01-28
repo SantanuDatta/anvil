@@ -355,6 +355,14 @@ namespace Anvil::UI
             opacity: 0.9;
         }
 
+        /* Icon Buttons */
+        QToolButton.icon-primary {
+            background-color: transparent;
+            border: none;
+            color: %5;
+            padding: 0;
+        }
+
         /* ComboBox */
         QComboBox {
             background-color: %2;
