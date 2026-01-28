@@ -14,6 +14,8 @@
 #include <QHeaderView>
 #include <QFileDialog>
 #include <QDir>
+#include <QToolButton>
+#include <QDialog>
 
 namespace Anvil::UI
 {
@@ -217,28 +219,30 @@ namespace Anvil::UI
         header->addWidget(m_addSiteBtn);
         layout->addLayout(header);
 
-        QFrame *sitesCard = createCard();
-        QVBoxLayout *sitesLayout = qobject_cast<QVBoxLayout *>(sitesCard->layout());
-
-        m_sitesTable = new QTableWidget(0, 4);
-        m_sitesTable->setHorizontalHeaderLabels({"Name", "Domain", "Path", "PHP"});
-        m_sitesTable->horizontalHeader()->setStretchLastSection(true);
+        m_sitesTable = new QTableWidget(0, 5);
+        m_sitesTable->setHorizontalHeaderLabels({"Name", "Domain", "Path", "PHP", "Actions"});
+        m_sitesTable->horizontalHeader()->setStretchLastSection(false);
+        m_sitesTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        m_sitesTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+        m_sitesTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+        m_sitesTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+        m_sitesTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
         m_sitesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_sitesTable->setSelectionMode(QAbstractItemView::SingleSelection);
         m_sitesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        sitesLayout->addWidget(m_sitesTable);
+        layout->addWidget(m_sitesTable);
 
-        QHBoxLayout *btnLayout = new QHBoxLayout();
-        btnLayout->addStretch();
-        m_removeSiteBtn = createButton("Remove Site", "destructive");
-        m_removeSiteBtn->setEnabled(false);
-        btnLayout->addWidget(m_removeSiteBtn);
-        sitesLayout->addLayout(btnLayout);
+        QHBoxLayout *paginationLayout = new QHBoxLayout();
+        m_sitesPageLabel = new QLabel("Page 1");
+        m_sitesPageLabel->setProperty("class", "muted");
+        paginationLayout->addWidget(m_sitesPageLabel);
+        paginationLayout->addStretch();
+        m_sitesPrevBtn = createButton("Previous", "secondary");
+        m_sitesNextBtn = createButton("Next", "secondary");
+        paginationLayout->addWidget(m_sitesPrevBtn);
+        paginationLayout->addWidget(m_sitesNextBtn);
+        layout->addLayout(paginationLayout);
 
-        connect(m_sitesTable, &QTableWidget::itemSelectionChanged, this, [this]()
-                { m_removeSiteBtn->setEnabled(m_sitesTable->currentRow() >= 0); });
-
-        layout->addWidget(sitesCard);
         m_contentStack->addWidget(m_sitesPage);
     }
 
@@ -408,7 +412,19 @@ namespace Anvil::UI
         connect(m_stopAllServicesBtn, &QPushButton::clicked, this, &MainWindow::onStopAllServices);
         connect(m_phpVersionCombo, &QComboBox::currentTextChanged, this, &MainWindow::onPhpVersionChanged);
         connect(m_addSiteBtn, &QPushButton::clicked, this, &MainWindow::onAddSiteClicked);
-        connect(m_removeSiteBtn, &QPushButton::clicked, this, &MainWindow::onRemoveSiteClicked);
+        connect(m_sitesPrevBtn, &QPushButton::clicked, this, [this]()
+                {
+                    if (m_sitesPageIndex > 0)
+                    {
+                        --m_sitesPageIndex;
+                        updateSitesTable();
+                    }
+                });
+        connect(m_sitesNextBtn, &QPushButton::clicked, this, [this]()
+                {
+                    ++m_sitesPageIndex;
+                    updateSitesTable();
+                });
         connect(m_themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onThemeModeChanged);
         connect(m_installPhpBtn, &QPushButton::clicked, this, &MainWindow::onInstallPhpVersion);
         connect(m_switchPhpBtn, &QPushButton::clicked, this, &MainWindow::onSwitchPhpVersion);
@@ -518,15 +534,101 @@ namespace Anvil::UI
         auto result = m_siteManager->listSites();
         if (result.isSuccess())
         {
-            for (const auto &site : result.data)
-            {
-                int row = m_sitesTable->rowCount();
-                m_sitesTable->insertRow(row);
-                m_sitesTable->setItem(row, 0, new QTableWidgetItem(site.name()));
-                m_sitesTable->setItem(row, 1, new QTableWidgetItem(site.domain()));
-                m_sitesTable->setItem(row, 2, new QTableWidgetItem(site.path()));
-                m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
-            }
+            m_sitesCache = result.data;
+        }
+        else
+        {
+            m_sitesCache.clear();
+        }
+
+        int totalSites = m_sitesCache.size();
+        int totalPages = totalSites > 0 ? (totalSites + m_sitesPageSize - 1) / m_sitesPageSize : 1;
+        if (m_sitesPageIndex >= totalPages)
+            m_sitesPageIndex = totalPages - 1;
+        if (m_sitesPageIndex < 0)
+            m_sitesPageIndex = 0;
+
+        int startIndex = m_sitesPageIndex * m_sitesPageSize;
+        int endIndex = qMin(startIndex + m_sitesPageSize, totalSites);
+
+        for (int index = startIndex; index < endIndex; ++index)
+        {
+            const auto &site = m_sitesCache.at(index);
+            int row = m_sitesTable->rowCount();
+            m_sitesTable->insertRow(row);
+
+            QTableWidgetItem *nameItem = new QTableWidgetItem(site.name());
+            nameItem->setData(Qt::UserRole, site.id());
+            m_sitesTable->setItem(row, 0, nameItem);
+            m_sitesTable->setItem(row, 1, new QTableWidgetItem(site.domain()));
+            m_sitesTable->setItem(row, 2, new QTableWidgetItem(site.path()));
+            m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
+
+            auto *deleteBtn = new QToolButton();
+            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
+            deleteBtn->setToolTip("Delete site");
+            deleteBtn->setAutoRaise(true);
+            deleteBtn->setCursor(Qt::PointingHandCursor);
+            connect(deleteBtn, &QToolButton::clicked, this, [this, row]()
+                    {
+                        m_sitesTable->setCurrentCell(row, 0);
+                        onRemoveSiteClicked();
+                    });
+            m_sitesTable->setCellWidget(row, 4, deleteBtn);
+        }
+
+        if (totalSites == 0)
+        {
+            m_sitesPageLabel->setText("No sites");
+            m_sitesPrevBtn->setEnabled(false);
+            m_sitesNextBtn->setEnabled(false);
+            return;
+        }
+
+        m_sitesPageLabel->setText(QString("Page %1 of %2").arg(m_sitesPageIndex + 1).arg(totalPages));
+        m_sitesPrevBtn->setEnabled(m_sitesPageIndex > 0);
+        m_sitesNextBtn->setEnabled(m_sitesPageIndex + 1 < totalPages);
+    }
+
+    void MainWindow::confirmAndRemoveSite(const QString &siteId, const QString &domain)
+    {
+        if (siteId.isEmpty())
+            return;
+
+        QDialog dialog(this);
+        dialog.setWindowTitle("Remove Site");
+        dialog.setModal(true);
+
+        QVBoxLayout *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(16, 16, 16, 16);
+        layout->setSpacing(16);
+
+        QLabel *message = new QLabel(QString("Are you sure you want to remove site '%1'?").arg(domain));
+        message->setWordWrap(true);
+        layout->addWidget(message);
+
+        QHBoxLayout *buttonsLayout = new QHBoxLayout();
+        buttonsLayout->addStretch();
+        QPushButton *cancelBtn = createButton("Cancel", "secondary");
+        QPushButton *deleteBtn = createButton("Delete", "destructive");
+        buttonsLayout->addWidget(cancelBtn);
+        buttonsLayout->addWidget(deleteBtn);
+        layout->addLayout(buttonsLayout);
+
+        connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
+        connect(deleteBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+        if (dialog.exec() != QDialog::Accepted)
+            return;
+
+        auto result = m_siteManager->removeSite(siteId);
+        if (result.isSuccess())
+        {
+            showSuccess("Site Removed", "Site removed successfully");
+        }
+        else
+        {
+            showError("Error", QString("Failed to remove site:\n%1").arg(result.error));
         }
     }
 
@@ -688,30 +790,13 @@ namespace Anvil::UI
         if (row < 0)
             return;
 
-        QString domain = m_sitesTable->item(row, 1)->text();
-
-        QMessageBox::StandardButton reply = QMessageBox::question(
-            this, "Remove Site",
-            QString("Are you sure you want to remove site '%1'?").arg(domain),
-            QMessageBox::Yes | QMessageBox::No);
-
-        if (reply != QMessageBox::Yes)
+        QTableWidgetItem *idItem = m_sitesTable->item(row, 0);
+        if (!idItem)
             return;
 
-        auto sites = m_siteManager->listSites();
-        if (sites.isSuccess() && row < sites.data.size())
-        {
-            QString siteId = sites.data[row].id();
-            auto result = m_siteManager->removeSite(siteId);
-            if (result.isSuccess())
-            {
-                showSuccess("Site Removed", "Site removed successfully");
-            }
-            else
-            {
-                showError("Error", QString("Failed to remove site:\n%1").arg(result.error));
-            }
-        }
+        QString siteId = idItem->data(Qt::UserRole).toString();
+        QString domain = m_sitesTable->item(row, 1)->text();
+        confirmAndRemoveSite(siteId, domain);
     }
 
     void MainWindow::onAddPathClicked()
