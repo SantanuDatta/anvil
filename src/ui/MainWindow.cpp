@@ -188,9 +188,6 @@ namespace Anvil::UI
         pathsTitle->setProperty("class", "subheading");
         pathsHeader->addWidget(pathsTitle);
         pathsHeader->addStretch();
-        m_addPathBtn = createButton("+ Add Path", "secondary");
-        pathsHeader->addWidget(m_addPathBtn);
-        pathsLayout->addLayout(pathsHeader);
 
         Core::ConfigManager &config = Core::ConfigManager::instance();
         m_pathsList = new QListWidget();
