@@ -16,9 +16,15 @@
 #include <QDir>
 #include <QToolButton>
 #include <QDialog>
+#include <QSize>
 
 namespace Anvil::UI
 {
+    namespace
+    {
+        const QStringList kServiceNames = {"nginx", "php", "mysql", "node"};
+    }
+
     MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent),
           m_siteManager(new Managers::SiteManager(this)),
@@ -130,8 +136,7 @@ namespace Anvil::UI
         indicatorsLayout->setSpacing(6);
         indicatorsLayout->setContentsMargins(0, 12, 0, 0);
 
-        const QStringList services = {"nginx", "php", "mysql", "node"};
-        for (const QString &service : services)
+        for (const QString &service : kServiceNames)
         {
             QWidget *indicator = createServiceIndicator(service, false);
             m_serviceIndicators[service] = indicator;
@@ -229,16 +234,38 @@ namespace Anvil::UI
         m_sitesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
         layout->addWidget(m_sitesTable);
 
-        QHBoxLayout *paginationLayout = new QHBoxLayout();
-        m_sitesPageLabel = new QLabel("Page 1");
-        m_sitesPageLabel->setProperty("class", "muted");
-        paginationLayout->addWidget(m_sitesPageLabel);
-        paginationLayout->addStretch();
-        m_sitesPrevBtn = createButton("Previous", "secondary");
-        m_sitesNextBtn = createButton("Next", "secondary");
-        paginationLayout->addWidget(m_sitesPrevBtn);
-        paginationLayout->addWidget(m_sitesNextBtn);
-        layout->addLayout(paginationLayout);
+        m_sitesPaginationContainer = new QWidget();
+        m_sitesPaginationLayout = new QHBoxLayout(m_sitesPaginationContainer);
+        m_sitesPaginationLayout->setContentsMargins(0, 0, 0, 0);
+        m_sitesPaginationLayout->setSpacing(8);
+        m_sitesPaginationLayout->addStretch();
+
+        m_sitesPrevBtn = new QToolButton();
+        m_sitesPrevBtn->setIcon(QIcon(":/icons/chevron-left.svg"));
+        m_sitesPrevBtn->setIconSize(QSize(16, 16));
+        m_sitesPrevBtn->setToolTip("Previous page");
+        m_sitesPrevBtn->setAutoRaise(true);
+        m_sitesPrevBtn->setCursor(Qt::PointingHandCursor);
+        m_sitesPrevBtn->setProperty("class", "secondary");
+        m_sitesPaginationLayout->addWidget(m_sitesPrevBtn);
+
+        m_sitesPageButtonsContainer = new QWidget();
+        m_sitesPageButtonsLayout = new QHBoxLayout(m_sitesPageButtonsContainer);
+        m_sitesPageButtonsLayout->setContentsMargins(0, 0, 0, 0);
+        m_sitesPageButtonsLayout->setSpacing(6);
+        m_sitesPaginationLayout->addWidget(m_sitesPageButtonsContainer);
+
+        m_sitesNextBtn = new QToolButton();
+        m_sitesNextBtn->setIcon(QIcon(":/icons/chevron-right.svg"));
+        m_sitesNextBtn->setIconSize(QSize(16, 16));
+        m_sitesNextBtn->setToolTip("Next page");
+        m_sitesNextBtn->setAutoRaise(true);
+        m_sitesNextBtn->setCursor(Qt::PointingHandCursor);
+        m_sitesNextBtn->setProperty("class", "secondary");
+        m_sitesPaginationLayout->addWidget(m_sitesNextBtn);
+
+        m_sitesPaginationLayout->addStretch();
+        layout->addWidget(m_sitesPaginationContainer);
 
         m_contentStack->addWidget(m_sitesPage);
     }
@@ -409,7 +436,7 @@ namespace Anvil::UI
         connect(m_stopAllServicesBtn, &QPushButton::clicked, this, &MainWindow::onStopAllServices);
         connect(m_phpVersionCombo, &QComboBox::currentTextChanged, this, &MainWindow::onPhpVersionChanged);
         connect(m_addSiteBtn, &QPushButton::clicked, this, &MainWindow::onAddSiteClicked);
-        connect(m_sitesPrevBtn, &QPushButton::clicked, this, [this]()
+        connect(m_sitesPrevBtn, &QToolButton::clicked, this, [this]()
                 {
                     if (m_sitesPageIndex > 0)
                     {
@@ -417,7 +444,7 @@ namespace Anvil::UI
                         updateSitesTable();
                     }
                 });
-        connect(m_sitesNextBtn, &QPushButton::clicked, this, [this]()
+        connect(m_sitesNextBtn, &QToolButton::clicked, this, [this]()
                 {
                     ++m_sitesPageIndex;
                     updateSitesTable();
@@ -452,6 +479,10 @@ namespace Anvil::UI
             return;
         }
 
+        bool allRunning = true;
+        bool allStopped = true;
+        bool hasServices = false;
+
         for (auto it = m_serviceIndicators.begin(); it != m_serviceIndicators.end(); ++it)
         {
             QString serviceName = it.key();
@@ -479,6 +510,10 @@ namespace Anvil::UI
                 isRunning = node && node->isRunning();
             }
 
+            hasServices = true;
+            allRunning = allRunning && isRunning;
+            allStopped = allStopped && !isRunning;
+
             QLabel *dot = indicator->findChild<QLabel *>("status_dot_" + serviceName);
             QLabel *text = indicator->findChild<QLabel *>("status_text_" + serviceName);
 
@@ -492,6 +527,37 @@ namespace Anvil::UI
             if (text)
                 text->setText(isRunning ? "Running" : "Stopped");
         }
+
+        if (!hasServices)
+        {
+            allRunning = false;
+            allStopped = true;
+        }
+
+        updateServiceActionButton(allRunning, allStopped);
+    }
+
+    void MainWindow::updateServiceActionButton(bool allRunning, bool allStopped)
+    {
+        QString label = "Stop All Services";
+        QString styleClass = "destructive";
+
+        if (allStopped)
+        {
+            label = "Start All Services";
+            styleClass = "primary";
+        }
+        else if (!allRunning)
+        {
+            label = "Stop All Services";
+            styleClass = "destructive";
+        }
+
+        m_stopAllServicesBtn->setText(label);
+        m_stopAllServicesBtn->setProperty("class", styleClass);
+        m_stopAllServicesBtn->style()->unpolish(m_stopAllServicesBtn);
+        m_stopAllServicesBtn->style()->polish(m_stopAllServicesBtn);
+        m_stopAllServicesBtn->update();
     }
 
     void MainWindow::updatePhpVersionCombo()
@@ -574,17 +640,59 @@ namespace Anvil::UI
             m_sitesTable->setCellWidget(row, 4, deleteBtn);
         }
 
-        if (totalSites == 0)
+        bool showPagination = totalSites > 10;
+        m_sitesPaginationContainer->setVisible(showPagination);
+
+        if (!showPagination)
         {
-            m_sitesPageLabel->setText("No sites");
+            clearSitesPaginationButtons();
             m_sitesPrevBtn->setEnabled(false);
             m_sitesNextBtn->setEnabled(false);
             return;
         }
 
-        m_sitesPageLabel->setText(QString("Page %1 of %2").arg(m_sitesPageIndex + 1).arg(totalPages));
+        rebuildSitesPagination(totalPages);
         m_sitesPrevBtn->setEnabled(m_sitesPageIndex > 0);
         m_sitesNextBtn->setEnabled(m_sitesPageIndex + 1 < totalPages);
+    }
+
+    void MainWindow::rebuildSitesPagination(int totalPages)
+    {
+        clearSitesPaginationButtons();
+
+        if (totalPages <= 0)
+            return;
+
+        int windowSize = 3;
+        int startPage = qMax(0, m_sitesPageIndex - 1);
+        int endPage = qMin(totalPages - 1, startPage + windowSize - 1);
+
+        if (endPage - startPage + 1 < windowSize)
+            startPage = qMax(0, endPage - windowSize + 1);
+
+        for (int page = startPage; page <= endPage; ++page)
+        {
+            QString styleClass = page == m_sitesPageIndex ? "primary" : "secondary";
+            auto *pageButton = createButton(QString::number(page + 1), styleClass);
+            pageButton->setFixedWidth(32);
+            connect(pageButton, &QPushButton::clicked, this, [this, page]()
+                    {
+                        m_sitesPageIndex = page;
+                        updateSitesTable();
+                    });
+            m_sitesPageButtonsLayout->addWidget(pageButton);
+            m_sitesPageButtons.push_back(pageButton);
+        }
+    }
+
+    void MainWindow::clearSitesPaginationButtons()
+    {
+        for (auto *button : m_sitesPageButtons)
+        {
+            m_sitesPageButtonsLayout->removeWidget(button);
+            button->deleteLater();
+        }
+        m_sitesPageButtons.clear();
     }
 
     void MainWindow::confirmAndRemoveSite(const QString &siteId, const QString &domain)
@@ -671,30 +779,79 @@ namespace Anvil::UI
 
     void MainWindow::onStopAllServices()
     {
+        auto *manager = Core::ServiceManager::instance();
+        if (!manager)
+        {
+            showError("Service Manager Error", "Service manager is not available.");
+            LOG_ERROR("ServiceManager not available when toggling services");
+            return;
+        }
+
+        bool allRunning = true;
+        bool allStopped = true;
+        bool hasServices = false;
+
+        auto updateState = [&](bool isRunning)
+        {
+            hasServices = true;
+            allRunning = allRunning && isRunning;
+            allStopped = allStopped && !isRunning;
+        };
+
+        if (auto *nginx = manager->nginxService())
+            updateState(nginx->isRunning());
+        if (auto *php = manager->phpService())
+            updateState(php->isRunning());
+        if (auto *db = manager->databaseService())
+            updateState(db->isRunning());
+        if (auto *node = manager->nodeService())
+            updateState(node->isRunning());
+
+        if (!hasServices)
+        {
+            showError("Service Manager Error", "No services are available to control.");
+            return;
+        }
+
+        bool shouldStart = allStopped;
+        QString actionTitle = shouldStart ? "Start All Services" : "Stop All Services";
+        QString actionMessage = shouldStart
+                                    ? "Are you sure you want to start all services?\nThis will start Nginx, PHP-FPM, database, and Node services."
+                                    : "Are you sure you want to stop all services?\nThis will stop Nginx, PHP-FPM, database, and Node services.";
+
         QMessageBox::StandardButton reply = QMessageBox::question(
-            this, "Stop All Services",
-            "Are you sure you want to stop all services?\nThis will stop Nginx, PHP-FPM, and database services.",
+            this, actionTitle,
+            actionMessage,
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply != QMessageBox::Yes)
             return;
 
-        auto *manager = Core::ServiceManager::instance();
-        if (!manager)
+        if (shouldStart)
         {
-            showError("Service Manager Error", "Service manager is not available.");
-            LOG_ERROR("ServiceManager not available when stopping services");
-            return;
+            if (auto *nginx = manager->nginxService())
+                nginx->start();
+            if (auto *php = manager->phpService())
+                php->start();
+            if (auto *db = manager->databaseService())
+                db->start();
+            if (auto *node = manager->nodeService())
+                node->start();
+            LOG_INFO("All services started by user");
+        }
+        else
+        {
+            if (auto *nginx = manager->nginxService())
+                nginx->stop();
+            if (auto *php = manager->phpService())
+                php->stop();
+            if (auto *db = manager->databaseService())
+                db->stop();
+            if (auto *node = manager->nodeService())
+                node->stop();
+            LOG_INFO("All services stopped by user");
         }
 
-        if (auto *nginx = manager->nginxService())
-            nginx->stop();
-        if (auto *php = manager->phpService())
-            php->stop();
-        if (auto *db = manager->databaseService())
-            db->stop();
-
-        LOG_INFO("All services stopped by user");
         QTimer::singleShot(1000, this, &MainWindow::updateServiceIndicators);
     }
 

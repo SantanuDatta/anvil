@@ -2,6 +2,8 @@
   <qresource prefix="/icons">
     <file alias="chevrons-up-down-dark.svg">../utils/resources/icons/chevrons-up-down-dark.svg</file>
     <file alias="chevrons-up-down-light.svg">../utils/resources/icons/chevrons-up-down-light.svg</file>
+    <file alias="chevron-left.svg">../utils/resources/icons/chevron-left.svg</file>
+    <file alias="chevron-right.svg">../utils/resources/icons/chevron-right.svg</file>
     <file alias="trash.svg">../utils/resources/icons/trash.svg</file>
   </qresource>
 </RCC>

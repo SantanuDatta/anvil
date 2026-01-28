@@ -298,7 +298,8 @@ namespace Anvil::UI
         }
 
         /* Buttons - Primary */
-        QPushButton.primary {
+        QPushButton.primary,
+        QToolButton.primary {
             background-color: %5;
             color: %6;
             border: none;
@@ -308,18 +309,21 @@ namespace Anvil::UI
             min-height: 26px;
         }
 
-        QPushButton.primary:hover {
+        QPushButton.primary:hover,
+        QToolButton.primary:hover {
             background-color: %5;
             opacity: 0.9;
         }
 
-        QPushButton.primary:pressed {
+        QPushButton.primary:pressed,
+        QToolButton.primary:pressed {
             background-color: %5;
             opacity: 0.8;
         }
 
         /* Buttons - Secondary */
-        QPushButton.secondary {
+        QPushButton.secondary,
+        QToolButton.secondary {
             background-color: %9;
             color: %1;
             border: 1px solid %7;
@@ -329,12 +333,14 @@ namespace Anvil::UI
             min-height: 26px;
         }
 
-        QPushButton.secondary:hover {
+        QPushButton.secondary:hover,
+        QToolButton.secondary:hover {
             background-color: %8;
         }
 
         /* Buttons - Destructive */
-        QPushButton.destructive {
+        QPushButton.destructive,
+        QToolButton.destructive {
             background-color: %12;
             color: white;
             border: none;
@@ -344,7 +350,8 @@ namespace Anvil::UI
             min-height: 26px;
         }
 
-        QPushButton.destructive:hover {
+        QPushButton.destructive:hover,
+        QToolButton.destructive:hover {
             opacity: 0.9;
         }
 
@@ -488,6 +495,20 @@ namespace Anvil::UI
             border: none;
             border-bottom: 1px solid %7;
             font-weight: 600;
+        }
+
+        QHeaderView::section:first {
+            border-top-left-radius: 8px;
+        }
+
+        QHeaderView::section:last {
+            border-top-right-radius: 8px;
+        }
+
+        QTableCornerButton::section {
+            background-color: %9;
+            border: none;
+            border-top-left-radius: 8px;
         }
 
         /* Tabs */
