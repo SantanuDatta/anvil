@@ -17,6 +17,7 @@
 #include "core/ServiceManager.h"
 #include "managers/SiteManager.h"
 #include "managers/VersionManager.h"
+#include "models/Site.h"
 
 namespace Anvil::UI
 {
@@ -67,6 +68,7 @@ namespace Anvil::UI
         void updatePhpVersionCombo();
         void updateSitesTable();
         void updateParkedPaths();
+        void confirmAndRemoveSite(const QString &siteId, const QString &domain);
         void showError(const QString &title, const QString &message);
         void showSuccess(const QString &title, const QString &message);
 
@@ -92,7 +94,9 @@ namespace Anvil::UI
 
         QTableWidget *m_sitesTable;
         QPushButton *m_addSiteBtn;
-        QPushButton *m_removeSiteBtn;
+        QPushButton *m_sitesPrevBtn;
+        QPushButton *m_sitesNextBtn;
+        QLabel *m_sitesPageLabel;
         QListWidget *m_pathsList;
         QPushButton *m_addPathBtn;
 
@@ -107,6 +111,9 @@ namespace Anvil::UI
         Managers::SiteManager *m_siteManager;
         Managers::VersionManager *m_versionManager;
         QTimer *m_updateTimer;
+        QList<Models::Site> m_sitesCache;
+        int m_sitesPageIndex = 0;
+        int m_sitesPageSize = 10;
 
         static constexpr int SIDEBAR_WIDTH = 250;
         static constexpr int UPDATE_INTERVAL = 5000;
