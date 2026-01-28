@@ -12,7 +12,6 @@
 #include <QJsonArray>
 #include <QDir>
 #include <QRegularExpression>
-#include <QSet>
 
 namespace
 {
@@ -104,12 +103,8 @@ namespace Anvil::Managers
 
         if (!sm->isInitialized())
         {
-            LOG_INFO("ServiceManager not initialized, attempting to initialize");
-            if (!sm->initialize())
-            {
-                LOG_ERROR("ServiceManager failed to initialize");
-                return false;
-            }
+            LOG_ERROR("ServiceManager not initialized");
+            return false;
         }
 
         // Load existing sites
@@ -761,40 +756,6 @@ namespace Anvil::Managers
         }
 
         sitesFromJson(doc.object());
-
-        if (m_parkedDirectories.isEmpty())
-        {
-            QSet<QString> inferredRoots;
-            for (const Models::Site &site : m_sites.values())
-            {
-                if (!site.isParked())
-                {
-                    continue;
-                }
-
-                QDir siteDir(site.path());
-                if (siteDir.dirName() == "public")
-                {
-                    siteDir.cdUp();
-                }
-
-                QDir projectDir(siteDir.absolutePath());
-                if (projectDir.cdUp())
-                {
-                    inferredRoots.insert(projectDir.absolutePath());
-                }
-                else
-                {
-                    inferredRoots.insert(siteDir.absolutePath());
-                }
-            }
-
-            if (!inferredRoots.isEmpty())
-            {
-                m_parkedDirectories = QStringList(inferredRoots.begin(), inferredRoots.end());
-                save();
-            }
-        }
         LOG_INFO(QString("Loaded %1 sites").arg(m_sites.size()));
 
         return true;
