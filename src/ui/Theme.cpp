@@ -488,6 +488,12 @@ namespace Anvil::UI
             background-color: %8;
         }
 
+        QTableCornerButton::section {
+            background-color: %9;
+            border: none;
+            border-top-left-radius: 8px;
+        }
+
         QHeaderView::section {
             background-color: %9;
             color: %1;
@@ -498,17 +504,11 @@ namespace Anvil::UI
         }
 
         QHeaderView::section:first {
-            border-top-left-radius: 8px;
+            border-top-left-radius: 5px;
         }
 
         QHeaderView::section:last {
-            border-top-right-radius: 8px;
-        }
-
-        QTableCornerButton::section {
-            background-color: %9;
-            border: none;
-            border-top-left-radius: 8px;
+            border-top-right-radius: 5px;
         }
 
         /* Tabs */
