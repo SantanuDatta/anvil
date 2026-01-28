@@ -174,8 +174,7 @@ namespace Anvil::UI
         title->setProperty("class", "heading");
         header->addWidget(title);
         header->addStretch();
-
-        m_addSiteBtn = createButton("+ Add Path", "primary");
+        m_addPathBtn = createButton("+ Add Path", "primary");
         header->addWidget(m_addPathBtn);
         layout->addLayout(header);
 
