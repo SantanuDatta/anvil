@@ -1,5 +1,6 @@
 #include "ui/MainWindow.h"
 #include "ui/Theme.h"
+#include "core/ConfigManager.h"
 #include "services/DatabaseService.h"
 #include "services/NginxService.h"
 #include "services/NodeService.h"
@@ -173,6 +174,9 @@ namespace Anvil::UI
         title->setProperty("class", "heading");
         header->addWidget(title);
         header->addStretch();
+
+        m_addSiteBtn = createButton("+ Add Path", "primary");
+        header->addWidget(m_addPathBtn);
         layout->addLayout(header);
 
         QFrame *pathsCard = createCard();
@@ -183,10 +187,11 @@ namespace Anvil::UI
         pathsTitle->setProperty("class", "subheading");
         pathsHeader->addWidget(pathsTitle);
         pathsHeader->addStretch();
-        m_addPathBtn = createButton("+ Add Path", "primary");
+        m_addPathBtn = createButton("+ Add Path", "secondary");
         pathsHeader->addWidget(m_addPathBtn);
         pathsLayout->addLayout(pathsHeader);
 
+        Core::ConfigManager &config = Core::ConfigManager::instance();
         m_pathsList = new QListWidget();
         m_pathsList->setSelectionMode(QAbstractItemView::NoSelection);
         pathsLayout->addWidget(m_pathsList);
@@ -535,19 +540,13 @@ namespace Anvil::UI
         {
             for (const auto &path : result.data)
             {
-                QString trimmedPath = path.trimmed();
-                if (trimmedPath.isEmpty())
-                {
-                    continue;
-                }
-
-                m_pathsList->addItem(trimmedPath);
+                m_pathsList->addItem(path);
             }
         }
 
         if (m_pathsList->count() == 0)
         {
-            auto *item = new QListWidgetItem("No path available. Add a new path to get started.");
+            auto *item = new QListWidgetItem("No project paths added yet");
             item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
             m_pathsList->addItem(item);
         }
