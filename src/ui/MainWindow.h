@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QTableWidget>
 #include <QLineEdit>
+#include <QToolButton>
+#include <QVector>
 
 #include "core/ServiceManager.h"
 #include "managers/SiteManager.h"
@@ -65,8 +67,11 @@ namespace Anvil::UI
         QWidget *createServiceIndicator(const QString &serviceName, bool isRunning);
         QPushButton *createButton(const QString &text, const QString &styleClass);
         void updateServiceIndicators();
+        void updateServiceActionButton(bool allRunning, bool allStopped);
         void updatePhpVersionCombo();
         void updateSitesTable();
+        void rebuildSitesPagination(int totalPages);
+        void clearSitesPaginationButtons();
         void updateParkedPaths();
         void confirmAndRemoveSite(const QString &siteId, const QString &domain);
         void showError(const QString &title, const QString &message);
@@ -94,9 +99,13 @@ namespace Anvil::UI
 
         QTableWidget *m_sitesTable;
         QPushButton *m_addSiteBtn;
-        QPushButton *m_sitesPrevBtn;
-        QPushButton *m_sitesNextBtn;
-        QLabel *m_sitesPageLabel;
+        QWidget *m_sitesPaginationContainer;
+        QHBoxLayout *m_sitesPaginationLayout;
+        QWidget *m_sitesPageButtonsContainer;
+        QHBoxLayout *m_sitesPageButtonsLayout;
+        QToolButton *m_sitesPrevBtn;
+        QToolButton *m_sitesNextBtn;
+        QVector<QPushButton *> m_sitesPageButtons;
         QListWidget *m_pathsList;
         QPushButton *m_addPathBtn;
 
@@ -113,7 +122,7 @@ namespace Anvil::UI
         QTimer *m_updateTimer;
         QList<Models::Site> m_sitesCache;
         int m_sitesPageIndex = 0;
-        int m_sitesPageSize = 10;
+        int m_sitesPageSize = 12;
 
         static constexpr int SIDEBAR_WIDTH = 250;
         static constexpr int UPDATE_INTERVAL = 5000;
