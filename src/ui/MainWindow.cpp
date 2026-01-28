@@ -241,7 +241,6 @@ namespace Anvil::UI
         m_sitesPaginationLayout->addStretch();
 
         m_sitesPrevBtn = new QToolButton();
-        m_sitesPrevBtn->setIcon(QIcon(":/icons/chevron-left.svg"));
         m_sitesPrevBtn->setIconSize(QSize(16, 16));
         m_sitesPrevBtn->setToolTip("Previous page");
         m_sitesPrevBtn->setAutoRaise(true);
@@ -256,7 +255,6 @@ namespace Anvil::UI
         m_sitesPaginationLayout->addWidget(m_sitesPageButtonsContainer);
 
         m_sitesNextBtn = new QToolButton();
-        m_sitesNextBtn->setIcon(QIcon(":/icons/chevron-right.svg"));
         m_sitesNextBtn->setIconSize(QSize(16, 16));
         m_sitesNextBtn->setToolTip("Next page");
         m_sitesNextBtn->setAutoRaise(true);
@@ -266,6 +264,8 @@ namespace Anvil::UI
 
         m_sitesPaginationLayout->addStretch();
         layout->addWidget(m_sitesPaginationContainer);
+
+        updateThemedIcons();
 
         m_contentStack->addWidget(m_sitesPage);
     }
@@ -628,7 +628,7 @@ namespace Anvil::UI
             m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
 
             auto *deleteBtn = new QToolButton();
-            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
+            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
             deleteBtn->setToolTip("Delete site");
             deleteBtn->setAutoRaise(true);
             deleteBtn->setCursor(Qt::PointingHandCursor);
@@ -756,6 +756,38 @@ namespace Anvil::UI
             item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
             m_pathsList->addItem(item);
         }
+    }
+
+    void MainWindow::updateThemedIcons()
+    {
+        if (m_sitesPrevBtn)
+        {
+            m_sitesPrevBtn->setIcon(QIcon(themedIconPath(":/icons/chevron-left-light.svg", ":/icons/chevron-left-dark.svg")));
+        }
+
+        if (m_sitesNextBtn)
+        {
+            m_sitesNextBtn->setIcon(QIcon(themedIconPath(":/icons/chevron-right-light.svg", ":/icons/chevron-right-dark.svg")));
+        }
+
+        if (!m_sitesTable)
+            return;
+
+        const QString trashIcon = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+        for (int row = 0; row < m_sitesTable->rowCount(); ++row)
+        {
+            QWidget *cellWidget = m_sitesTable->cellWidget(row, 4);
+            auto *deleteBtn = qobject_cast<QToolButton *>(cellWidget);
+            if (deleteBtn)
+            {
+                deleteBtn->setIcon(QIcon(trashIcon));
+            }
+        }
+    }
+
+    QString MainWindow::themedIconPath(const QString &lightPath, const QString &darkPath) const
+    {
+        return Theme::instance().isDark() ? darkPath : lightPath;
     }
 
     void MainWindow::showError(const QString &title, const QString &message)
@@ -907,6 +939,7 @@ namespace Anvil::UI
     {
         LOG_DEBUG("Theme changed, reapplying styles");
         Theme::instance().apply();
+        updateThemedIcons();
     }
 
     void MainWindow::onAddSiteClicked()

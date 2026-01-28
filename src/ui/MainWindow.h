@@ -73,6 +73,8 @@ namespace Anvil::UI
         void rebuildSitesPagination(int totalPages);
         void clearSitesPaginationButtons();
         void updateParkedPaths();
+        void updateThemedIcons();
+        QString themedIconPath(const QString &lightPath, const QString &darkPath) const;
         void confirmAndRemoveSite(const QString &siteId, const QString &domain);
         void showError(const QString &title, const QString &message);
         void showSuccess(const QString &title, const QString &message);
