@@ -6,8 +6,12 @@
     <file alias="chevron-left-light.svg">../utils/resources/icons/chevron-left-light.svg</file>
     <file alias="chevron-right-dark.svg">../utils/resources/icons/chevron-right-dark.svg</file>
     <file alias="chevron-right-light.svg">../utils/resources/icons/chevron-right-light.svg</file>
+    <file alias="trash-dark.svg">../utils/resources/icons/trash-dark.svg</file>
+    <file alias="trash-light.svg">../utils/resources/icons/trash-light.svg</file>
     <file alias="trash.svg">../utils/resources/icons/trash.svg</file>
     <file alias="arrow-down-tray.svg">../utils/resources/icons/arrow-down-tray.svg</file>
+    <file alias="arrow-path-dark.svg">../utils/resources/icons/arrow-path-dark.svg</file>
+    <file alias="arrow-path-light.svg">../utils/resources/icons/arrow-path-light.svg</file>
     <file alias="arrow-path.svg">../utils/resources/icons/arrow-path.svg</file>
   </qresource>
 </RCC>
