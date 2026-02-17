@@ -184,8 +184,53 @@ namespace Anvil::Managers
         auto *node = nodeService();
         if (!node)
             return Services::ServiceResult<QStringList>::Err("Node service not available");
-        auto result = node->listLTSVersions();
-        return result.isSuccess() ? result : Services::ServiceResult<QStringList>::Ok({"18", "20", "22"});
+
+        QStringList versions;
+
+        auto availableResult = node->listLTSVersions();
+        if (availableResult.isSuccess())
+        {
+            for (const auto &version : availableResult.data)
+                versions.append(normalizeVersion(version));
+        }
+        else
+        {
+            LOG_WARNING(QString("Failed to query available Node.js versions: %1").arg(availableResult.error));
+        }
+
+        auto installedResult = listInstalledNodeVersions();
+        if (installedResult.isSuccess())
+        {
+            for (const auto &version : installedResult.data)
+                versions.append(normalizeVersion(version));
+        }
+
+        versions.removeAll(QString());
+        versions.removeDuplicates();
+
+        std::sort(versions.begin(), versions.end(), [](const QString &a, const QString &b)
+                  {
+                      const QStringList aParts = a.split('.');
+                      const QStringList bParts = b.split('.');
+
+                      const int aMajor = aParts.value(0).toInt();
+                      const int bMajor = bParts.value(0).toInt();
+                      if (aMajor != bMajor)
+                          return aMajor > bMajor;
+
+                      const int aMinor = aParts.value(1).toInt();
+                      const int bMinor = bParts.value(1).toInt();
+                      if (aMinor != bMinor)
+                          return aMinor > bMinor;
+
+                      const int aPatch = aParts.value(2).toInt();
+                      const int bPatch = bParts.value(2).toInt();
+                      return aPatch > bPatch;
+                  });
+
+        return versions.isEmpty()
+                   ? Services::ServiceResult<QStringList>::Err("No available Node.js versions found")
+                   : Services::ServiceResult<QStringList>::Ok(versions);
     }
 
     Services::ServiceResult<bool> VersionManager::setSitePhpVersion(const QString &siteId, const QString &version)
