@@ -1,4 +1,5 @@
 #include <QtTest/QtTest>
+#include <QFileInfo>
 
 #include "utils/Process.h"
 
@@ -10,6 +11,8 @@ class ProcessExecutorIntegrationTest : public QObject
 
 private slots:
     void executesCommand();
+    void resolvesExecutablePathWithoutShellingOut();
+    void supportsEnvironmentValuesContainingEqualsSigns();
 };
 
 void ProcessExecutorIntegrationTest::executesCommand()
@@ -20,6 +23,29 @@ void ProcessExecutorIntegrationTest::executesCommand()
     QVERIFY(result.isSuccess());
     QCOMPARE(result.exitCode, 0);
     QVERIFY(result.output.contains("hello"));
+}
+
+void ProcessExecutorIntegrationTest::resolvesExecutablePathWithoutShellingOut()
+{
+    ProcessExecutor executor;
+
+    const QString path = executor.programPath("echo");
+
+    QVERIFY2(!path.isEmpty(), "Expected to find executable path for 'echo'");
+    QVERIFY2(QFileInfo::exists(path), "Returned executable path should exist");
+}
+
+void ProcessExecutorIntegrationTest::supportsEnvironmentValuesContainingEqualsSigns()
+{
+    ProcessExecutor executor;
+    executor.addEnvironmentVariable("ANVIL_COMPLEX_VALUE", "alpha=beta=gamma");
+
+    const ProcessResult result = executor.execute(
+        "python3",
+        {"-c", "import os;print(os.getenv('ANVIL_COMPLEX_VALUE', ''))"});
+
+    QVERIFY(result.isSuccess());
+    QCOMPARE(result.output.trimmed(), QString("alpha=beta=gamma"));
 }
 
 QTEST_MAIN(ProcessExecutorIntegrationTest)
