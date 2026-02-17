@@ -490,6 +490,7 @@ namespace Anvil::UI
         /* Table */
         QTableWidget {
             background-color: %2;
+            alternate-background-color: %3;
             border: 1px solid %7;
             border-radius: 8px;
             gridline-color: %7;
@@ -502,6 +503,11 @@ namespace Anvil::UI
 
         QTableWidget::item:selected {
             background-color: %8;
+        }
+
+        QTableWidget QPushButton {
+            min-height: 30px;
+            padding: 4px 10px;
         }
 
         QTableCornerButton::section {

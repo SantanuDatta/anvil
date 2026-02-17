@@ -291,11 +291,17 @@ namespace Anvil::UI
         m_phpVersionsTable = new QTableWidget(0, 3);
         m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Installed", "Action"});
         m_phpVersionsTable->verticalHeader()->setVisible(false);
+        m_phpVersionsTable->verticalHeader()->setDefaultSectionSize(42);
         m_phpVersionsTable->setSelectionMode(QAbstractItemView::NoSelection);
         m_phpVersionsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        m_phpVersionsTable->setFocusPolicy(Qt::NoFocus);
+        m_phpVersionsTable->setShowGrid(false);
+        m_phpVersionsTable->setAlternatingRowColors(true);
+        m_phpVersionsTable->setWordWrap(false);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-        m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+        m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
+        m_phpVersionsTable->setColumnWidth(2, 140);
         versionsLayout->addWidget(m_phpVersionsTable);
         layout->addWidget(versionsCard);
 
@@ -620,18 +626,30 @@ namespace Anvil::UI
         {
             const QString version = m_phpKnownVersions.at(row);
             const bool isInstalled = m_installedPhpVersions.contains(version);
+            const bool isActiveGlobalVersion = version == currentVersion;
 
             m_phpVersionsTable->insertRow(row);
 
             auto *versionItem = new QTableWidgetItem(version);
             versionItem->setData(Qt::UserRole, version);
+            versionItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
             m_phpVersionsTable->setItem(row, 0, versionItem);
 
-            auto *installedItem = new QTableWidgetItem(isInstalled ? QString::fromUtf8("✓") : "");
+            auto *installedItem = new QTableWidgetItem(isInstalled ? QString::fromUtf8("✓") : "-");
             installedItem->setTextAlignment(Qt::AlignCenter);
             m_phpVersionsTable->setItem(row, 1, installedItem);
 
             auto *actionBtn = createButton(isInstalled ? "Uninstall" : "Install", isInstalled ? "secondary" : "primary");
+            actionBtn->setMinimumWidth(108);
+            actionBtn->setCursor(Qt::PointingHandCursor);
+            if (isInstalled && isActiveGlobalVersion)
+            {
+                actionBtn->setEnabled(false);
+                actionBtn->setToolTip("Active global PHP version cannot be uninstalled. Switch versions first.");
+                actionBtn->setCursor(Qt::ArrowCursor);
+            }
+            actionBtn->style()->unpolish(actionBtn);
+            actionBtn->style()->polish(actionBtn);
             connect(actionBtn, &QPushButton::clicked, this, [this, row]()
                     { onPhpVersionTableAction(row); });
             m_phpVersionsTable->setCellWidget(row, 2, actionBtn);
@@ -1077,6 +1095,16 @@ namespace Anvil::UI
 
         const QString version = m_phpKnownVersions.at(row);
         const bool installed = m_installedPhpVersions.contains(version);
+        const bool isActiveGlobalVersion = version == m_versionManager->globalPhpVersion();
+
+        if (installed && isActiveGlobalVersion)
+        {
+            showError(
+                "Cannot Uninstall Active PHP Version",
+                QString("PHP %1 is currently the active global version. Switch to another version before uninstalling.")
+                    .arg(version));
+            return;
+        }
 
         const QString action = installed ? "Uninstall" : "Install";
         QMessageBox::StandardButton reply = QMessageBox::question(
