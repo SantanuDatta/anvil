@@ -980,7 +980,7 @@ namespace Anvil::UI
 
     QIcon MainWindow::themedTrashIcon() const
     {
-        const QString trashPath = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+        const QString trashPath = ":/icons/trash.svg";
         const QColor destructiveColor = Theme::instance().isDark() ? QColor("#7F1D1D") : QColor("#ED3D0C");
 
         QIcon baseIcon(trashPath);
