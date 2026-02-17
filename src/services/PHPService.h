@@ -31,6 +31,7 @@ namespace Anvil::Services
         ServiceResult<QList<Models::PHPVersion>> listInstalledVersions();
         ServiceResult<bool> installVersion(const QString &version);
         ServiceResult<bool> uninstallVersion(const QString &version);
+        ServiceResult<bool> updateVersion(const QString &version);
         ServiceResult<bool> switchVersion(const QString &version);
 
         // Version info
@@ -90,6 +91,12 @@ namespace Anvil::Services
         void updateSymlinks(const QString &version);
 
         // Repository detection
+        // Repository discovery helpers
+        QStringList discoverRepositoryPhpVersions() const;
+        QStringList discoverInstalledPhpVersions() const;
+        QStringList parsePhpVersionsFromOutput(const QString &output) const;
+        QString normalizeVersionToken(const QString &token) const;
+
         QString detectPackageManager() const;
         bool isUbuntuPpaAvailable() const;
 

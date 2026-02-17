@@ -52,6 +52,7 @@ namespace Anvil::UI
         void onInstallPhpVersion();
         void onAddPathClicked();
         void onPhpVersionTableAction(int row);
+        void onPhpVersionUninstallAction(int row);
         void onSavePhpUploadSize();
 
     private:
@@ -115,7 +116,6 @@ namespace Anvil::UI
         QPushButton *m_addPathBtn;
 
         QTableWidget *m_phpVersionsTable;
-        QStringList m_phpKnownVersions;
         QSet<QString> m_installedPhpVersions;
         QSpinBox *m_phpUploadSizeSpin;
         QPushButton *m_phpUploadSizeSaveBtn;

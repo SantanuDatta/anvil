@@ -160,7 +160,7 @@ namespace Anvil::UI
         phpHeader->addWidget(m_phpVersionCombo);
         phpLayout->addLayout(phpHeader);
 
-        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden. <a href=\"php-tab\">Check PHP versions</a>");
+        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden. <a href=\"php-tab\" style=\"color: #2563eb; text-decoration: none; font-weight: 600;\">Check PHP versions</a>");
         phpDesc->setProperty("class", "muted");
         phpDesc->setTextFormat(Qt::RichText);
         phpDesc->setTextInteractionFlags(Qt::TextBrowserInteraction);
@@ -285,16 +285,12 @@ namespace Anvil::UI
         layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
-        QLabel *title = new QLabel("PHP");
+        QLabel *title = new QLabel("PHP Verisons");
         title->setProperty("class", "heading");
         layout->addWidget(title);
 
-        QLabel *versionsTitle = new QLabel("Versions");
-        versionsTitle->setProperty("class", "subheading");
-        layout->addWidget(versionsTitle);
-
         m_phpVersionsTable = new QTableWidget(0, 3);
-        m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Installed", "Action"});
+        m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Global", "Action"});
         m_phpVersionsTable->verticalHeader()->setVisible(false);
         m_phpVersionsTable->verticalHeader()->setDefaultSectionSize(42);
         m_phpVersionsTable->setSelectionMode(QAbstractItemView::NoSelection);
@@ -306,8 +302,10 @@ namespace Anvil::UI
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
-        m_phpVersionsTable->setColumnWidth(2, 140);
-        layout->addWidget(m_phpVersionsTable);
+        m_phpVersionsTable->horizontalHeaderItem(0)->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        m_phpVersionsTable->setColumnWidth(2, 240);
+        m_phpVersionsTable->setMinimumHeight(360);
+        layout->addWidget(m_phpVersionsTable, 1);
 
         QFrame *uploadCard = createCard();
         QVBoxLayout *uploadLayout = qobject_cast<QVBoxLayout *>(uploadCard->layout());
@@ -331,9 +329,6 @@ namespace Anvil::UI
         uploadLayout->addLayout(uploadRow);
         layout->addWidget(uploadCard);
 
-        m_phpKnownVersions = {"8.4", "8.3", "8.2", "8.1", "8.0", "7.4"};
-
-        layout->addStretch();
         m_contentStack->addWidget(m_phpPage);
     }
 
@@ -607,9 +602,21 @@ namespace Anvil::UI
             m_phpVersionCombo->addItem("No PHP versions installed");
         }
 
-        for (int row = 0; row < m_phpKnownVersions.size(); ++row)
+        QStringList availableVersions;
+        auto availableResult = m_versionManager->listAvailablePhpVersions();
+        if (availableResult.isSuccess())
         {
-            const QString version = m_phpKnownVersions.at(row);
+            availableVersions = availableResult.data;
+        }
+
+        if (availableVersions.isEmpty())
+        {
+            availableVersions = QStringList(m_installedPhpVersions.begin(), m_installedPhpVersions.end());
+        }
+
+        for (int row = 0; row < availableVersions.size(); ++row)
+        {
+            const QString version = availableVersions.at(row);
             const bool isInstalled = m_installedPhpVersions.contains(version);
             const bool isActiveGlobalVersion = version == currentVersion;
 
@@ -630,24 +637,43 @@ namespace Anvil::UI
             versionItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
             m_phpVersionsTable->setItem(row, 0, versionItem);
 
-            auto *installedItem = new QTableWidgetItem(isInstalled ? QString::fromUtf8("✓") : "-");
-            installedItem->setTextAlignment(Qt::AlignCenter);
-            m_phpVersionsTable->setItem(row, 1, installedItem);
+            auto *globalItem = new QTableWidgetItem(isActiveGlobalVersion ? "Yes" : "-");
+            globalItem->setTextAlignment(Qt::AlignCenter);
+            m_phpVersionsTable->setItem(row, 1, globalItem);
 
-            auto *actionBtn = createButton(isInstalled ? "Uninstall" : "Install", isInstalled ? "secondary" : "primary");
-            actionBtn->setMinimumWidth(108);
-            actionBtn->setCursor(Qt::PointingHandCursor);
-            if (isInstalled && isActiveGlobalVersion)
-            {
-                actionBtn->setEnabled(false);
-                actionBtn->setToolTip("Active global PHP version cannot be uninstalled. Switch versions first.");
-                actionBtn->setCursor(Qt::ArrowCursor);
-            }
-            actionBtn->style()->unpolish(actionBtn);
-            actionBtn->style()->polish(actionBtn);
-            connect(actionBtn, &QPushButton::clicked, this, [this, row]()
+            QWidget *actionContainer = new QWidget();
+            QHBoxLayout *actionLayout = new QHBoxLayout(actionContainer);
+            actionLayout->setContentsMargins(0, 0, 0, 0);
+            actionLayout->setSpacing(6);
+            actionLayout->setAlignment(Qt::AlignCenter);
+
+            auto *syncBtn = new QToolButton(actionContainer);
+            syncBtn->setAutoRaise(true);
+            syncBtn->setCursor(isInstalled ? Qt::ArrowCursor : Qt::PointingHandCursor);
+            syncBtn->setProperty("class", "icon-primary");
+            syncBtn->setIcon(QIcon(isInstalled ? ":/icons/arrow-path.svg" : ":/icons/arrow-down-tray.svg"));
+            syncBtn->setToolTip(isInstalled ? "Update checks are coming soon." : "Install this PHP version");
+            syncBtn->setEnabled(!isInstalled);
+            syncBtn->setIconSize(QSize(18, 18));
+            connect(syncBtn, &QToolButton::clicked, this, [this, row]()
                     { onPhpVersionTableAction(row); });
-            m_phpVersionsTable->setCellWidget(row, 2, actionBtn);
+            actionLayout->addWidget(syncBtn);
+
+            auto *deleteBtn = new QToolButton(actionContainer);
+            deleteBtn->setAutoRaise(true);
+            deleteBtn->setProperty("class", "icon-destructive");
+            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
+            deleteBtn->setToolTip("Uninstall this PHP version");
+            deleteBtn->setEnabled(isInstalled && !isActiveGlobalVersion);
+            deleteBtn->setCursor((isInstalled && !isActiveGlobalVersion) ? Qt::PointingHandCursor : Qt::ArrowCursor);
+            deleteBtn->setIconSize(QSize(18, 18));
+            if (isActiveGlobalVersion)
+                deleteBtn->setToolTip("Active global PHP version cannot be uninstalled. Switch versions first.");
+            connect(deleteBtn, &QToolButton::clicked, this, [this, row]()
+                    { onPhpVersionUninstallAction(row); });
+            actionLayout->addWidget(deleteBtn);
+
+            m_phpVersionsTable->setCellWidget(row, 2, actionContainer);
         }
 
     }
@@ -1080,16 +1106,19 @@ namespace Anvil::UI
         onPhpVersionTableAction(row);
     }
 
-    void MainWindow::onPhpVersionTableAction(int row)
+    void MainWindow::onPhpVersionUninstallAction(int row)
     {
-        if (row < 0 || row >= m_phpKnownVersions.size())
+        if (row < 0 || row >= m_phpVersionsTable->rowCount())
             return;
 
-        const QString version = m_phpKnownVersions.at(row);
-        const bool installed = m_installedPhpVersions.contains(version);
+        QTableWidgetItem *versionItem = m_phpVersionsTable->item(row, 0);
+        if (!versionItem)
+            return;
+
+        const QString version = versionItem->data(Qt::UserRole).toString();
         const bool isActiveGlobalVersion = version == m_versionManager->globalPhpVersion();
 
-        if (installed && isActiveGlobalVersion)
+        if (isActiveGlobalVersion)
         {
             showError(
                 "Cannot Uninstall Active PHP Version",
@@ -1098,34 +1127,56 @@ namespace Anvil::UI
             return;
         }
 
-        const QString action = installed ? "Uninstall" : "Install";
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
-            QString("%1 PHP").arg(action),
-            QString("%1 PHP %2?").arg(action, version),
+            "Uninstall PHP",
+            QString("Uninstall PHP %1?").arg(version),
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply != QMessageBox::Yes)
             return;
 
-        auto result = installed
-                          ? m_versionManager->uninstallPhpVersion(version)
-                          : m_versionManager->installPhpVersion(version);
-
+        auto result = m_versionManager->uninstallPhpVersion(version);
         if (result.isSuccess())
         {
-            showSuccess(
-                installed ? "PHP Uninstalled" : "PHP Installed",
-                installed ? QString("PHP %1 uninstalled successfully").arg(version)
-                          : QString("PHP %1 installed successfully").arg(version));
+            showSuccess("PHP Uninstalled", QString("PHP %1 uninstalled successfully").arg(version));
             updatePhpVersionCombo();
         }
         else
         {
-            showError(
-                "Error",
-                QString("Failed to %1 PHP %2:\n%3")
-                    .arg(installed ? "uninstall" : "install", version, result.error));
+            showError("Error", QString("Failed to uninstall PHP %1:\n%2").arg(version, result.error));
+        }
+    }
+
+    void MainWindow::onPhpVersionTableAction(int row)
+    {
+        if (row < 0 || row >= m_phpVersionsTable->rowCount())
+            return;
+
+        QTableWidgetItem *versionItem = m_phpVersionsTable->item(row, 0);
+        if (!versionItem)
+            return;
+
+        const QString version = versionItem->data(Qt::UserRole).toString();
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "Install PHP",
+            QString("Install PHP %1?").arg(version),
+            QMessageBox::Yes | QMessageBox::No);
+
+        if (reply != QMessageBox::Yes)
+            return;
+
+        auto result = m_versionManager->installPhpVersion(version);
+
+        if (result.isSuccess())
+        {
+            showSuccess("PHP Installed", QString("PHP %1 installed successfully").arg(version));
+            updatePhpVersionCombo();
+        }
+        else
+        {
+            showError("Error", QString("Failed to install PHP %1:\n%2").arg(version, result.error));
         }
     }
 

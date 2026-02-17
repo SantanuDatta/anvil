@@ -5,6 +5,7 @@
 #include <QRegularExpression>
 #include <QDir>
 #include <QFileInfo>
+#include <algorithm>
 
 namespace Anvil::Services
 {
@@ -150,14 +151,37 @@ namespace Anvil::Services
     {
         QList<Models::PHPVersion> versions;
 
-        // Common available PHP versions
-        QStringList availableVersions = {"7.4", "8.0", "8.1", "8.2", "8.3", "8.4"};
+        QStringList availableVersions = discoverRepositoryPhpVersions();
+
+        for (const QString &installedVersion : m_installedVersions.keys())
+            availableVersions.append(normalizeVersion(installedVersion));
+
+        if (availableVersions.isEmpty())
+        {
+            // Fallback if repository query fails in the current environment
+            availableVersions = {"7.4", "8.0", "8.1", "8.2", "8.3", "8.4"};
+        }
+
+        availableVersions.removeAll(QString());
+        availableVersions.removeDuplicates();
+
+        std::sort(availableVersions.begin(), availableVersions.end(), [](const QString &a, const QString &b)
+                  {
+                      const QStringList aParts = a.split('.');
+                      const QStringList bParts = b.split('.');
+
+                      const int aMajor = aParts.value(0).toInt();
+                      const int bMajor = bParts.value(0).toInt();
+                      if (aMajor != bMajor)
+                          return aMajor > bMajor;
+
+                      const int aMinor = aParts.value(1).toInt();
+                      const int bMinor = bParts.value(1).toInt();
+                      return aMinor > bMinor;
+                  });
 
         for (const QString &ver : availableVersions)
-        {
-            Models::PHPVersion phpVersion(ver);
-            versions.append(phpVersion);
-        }
+            versions.append(Models::PHPVersion(ver));
 
         return ServiceResult<QList<Models::PHPVersion>>::Ok(versions);
     }
@@ -216,6 +240,32 @@ namespace Anvil::Services
         }
 
         return result;
+    }
+
+    ServiceResult<bool> PHPService::updateVersion(const QString &version)
+    {
+        QString normalizedVersion = normalizeVersion(version);
+
+        LOG_INFO(QString("Updating PHP %1").arg(normalizedVersion));
+
+        if (!isVersionInstalled(normalizedVersion))
+        {
+            return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(normalizedVersion));
+        }
+
+        auto result = installFromRepository(normalizedVersion);
+        if (result.isError())
+            return result;
+
+        scanInstalledVersions();
+
+        if (m_currentVersion == normalizedVersion)
+        {
+            configure();
+            restartFpm(normalizedVersion);
+        }
+
+        return ServiceResult<bool>::Ok(true);
     }
 
     ServiceResult<bool> PHPService::uninstallVersion(const QString &version)
@@ -800,7 +850,7 @@ namespace Anvil::Services
             }
         }
 
-        // 2) Scan for phpX.Y binaries on the system
+        // 2) Scan for explicit phpX.Y binaries on the system
         for (int major = 5; major <= 9; ++major)
         {
             for (int minor = 0; minor <= 10; ++minor)
@@ -809,14 +859,15 @@ namespace Anvil::Services
                 const QString binName = QString("php%1").arg(shortVer);
 
                 if (checkProgramExists(binName))
-                {
                     shortVersions.insert(shortVer);
-                }
             }
         }
 
-        // 3) CRITICAL FIX: For each short version, resolve full version and register
-        //    but ALWAYS use short version as the key
+        // 3) Discover from package manager metadata and known distro layouts
+        for (const QString &discoveredVersion : discoverInstalledPhpVersions())
+            shortVersions.insert(normalizeVersion(discoveredVersion));
+
+        // 4) Register each discovered short version
         for (const QString &shortVer : shortVersions)
         {
             QString phpBinary = phpBinaryPath(shortVer);
@@ -914,6 +965,188 @@ pm.max_spare_servers = 3
 
         Utils::FileSystem::createSymlink(phpBinary, "/usr/local/bin/php");
         Utils::FileSystem::createSymlink(phpFpmBinary, "/usr/local/bin/php-fpm");
+    }
+
+    QStringList PHPService::discoverRepositoryPhpVersions() const
+    {
+        QStringList versions;
+
+        if (m_packageManager == "apt")
+        {
+            auto searchResult = executeAndCapture("apt-cache", {"search", "^php[0-9]+\.[0-9]+"});
+            if (searchResult.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(searchResult.data));
+        }
+        else if (m_packageManager == "dnf" || m_packageManager == "yum")
+        {
+            auto listResult = executeAndCapture(m_packageManager, {"list", "available", "php*"});
+            if (listResult.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(listResult.data));
+        }
+        else if (m_packageManager == "pacman")
+        {
+            auto searchResult = executeAndCapture("pacman", {"-Ss", "php"});
+            if (searchResult.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(searchResult.data));
+        }
+        else if (m_packageManager == "zypper")
+        {
+            auto searchResult = executeAndCapture("zypper", {"search", "-s", "php"});
+            if (searchResult.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(searchResult.data));
+        }
+
+        versions.removeAll(QString());
+        versions.removeDuplicates();
+        return versions;
+    }
+
+    QStringList PHPService::discoverInstalledPhpVersions() const
+    {
+        QStringList versions;
+
+        if (m_packageManager == "apt")
+        {
+            auto result = executeAndCapture("dpkg-query", {"-W", "-f=${Package}\n", "php*"});
+            if (result.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(result.data));
+        }
+        else if (m_packageManager == "dnf" || m_packageManager == "yum")
+        {
+            auto result = executeAndCapture("rpm", {"-qa", "php*"});
+            if (result.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(result.data));
+        }
+        else if (m_packageManager == "pacman")
+        {
+            auto result = executeAndCapture("pacman", {"-Q"});
+            if (result.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(result.data));
+        }
+        else if (m_packageManager == "zypper")
+        {
+            auto result = executeAndCapture("rpm", {"-qa", "php*"});
+            if (result.isSuccess())
+                versions.append(parsePhpVersionsFromOutput(result.data));
+        }
+
+        auto defaultPhp = executeAndCapture("php", {"-r", "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"});
+        if (defaultPhp.isSuccess())
+            versions.append(normalizeVersionToken(defaultPhp.data.trimmed()));
+
+        QDir remiDir("/opt/remi");
+        if (remiDir.exists())
+        {
+            const QFileInfoList entries = remiDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+            QRegularExpression remiRegex(R"(^php(\d)(\d)$)");
+            for (const QFileInfo &entry : entries)
+            {
+                QRegularExpressionMatch match = remiRegex.match(entry.fileName());
+                if (!match.hasMatch())
+                    continue;
+
+                const QString version = QString("%1.%2").arg(match.captured(1), match.captured(2));
+                const QString phpBin = Utils::FileSystem::joinPath(entry.absoluteFilePath(), "root/usr/bin/php");
+                if (Utils::FileSystem::fileExists(phpBin))
+                    versions.append(version);
+            }
+        }
+
+        versions.removeAll(QString());
+        versions.removeDuplicates();
+        return versions;
+    }
+
+    QString PHPService::normalizeVersionToken(const QString &token) const
+    {
+        QRegularExpression dotted(R"((\d+)\.(\d+))");
+        auto dottedMatch = dotted.match(token);
+        if (dottedMatch.hasMatch())
+            return QString("%1.%2").arg(dottedMatch.captured(1), dottedMatch.captured(2));
+
+        QRegularExpression compact(R"(^([5-9])(\d)$)");
+        auto compactMatch = compact.match(token);
+        if (compactMatch.hasMatch())
+            return QString("%1.%2").arg(compactMatch.captured(1), compactMatch.captured(2));
+
+        return QString();
+    }
+
+    QStringList PHPService::parsePhpVersionsFromOutput(const QString &output) const
+    {
+        QStringList versions;
+
+        // Token-oriented parsing is safer than relying on one global regex because
+        // package managers can format package names differently (php8.3, php83,
+        // libapache2-mod-php8.3, rh-php83-php-cli).
+        auto parseVersionAfterPhp = [this](const QString &token) -> QString {
+            int phpIndex = token.indexOf("php", 0, Qt::CaseInsensitive);
+            while (phpIndex != -1)
+            {
+                int cursor = phpIndex + 3;
+                while (cursor < token.size())
+                {
+                    const QChar separator = token[cursor];
+                    if (separator == '.' || separator == '-' || separator == '_')
+                    {
+                        ++cursor;
+                        continue;
+                    }
+                    break;
+                }
+
+                QString candidate;
+                while (cursor < token.size() && token[cursor].isDigit())
+                {
+                    candidate.append(token[cursor]);
+                    ++cursor;
+                }
+
+                if (cursor < token.size() && token[cursor] == '.')
+                {
+                    candidate.append('.');
+                    ++cursor;
+                    while (cursor < token.size() && token[cursor].isDigit())
+                    {
+                        candidate.append(token[cursor]);
+                        ++cursor;
+                    }
+                }
+
+                if (!candidate.isEmpty())
+                {
+                    const QString normalized = normalizeVersionToken(candidate);
+                    if (!normalized.isEmpty())
+                        return normalized;
+                }
+
+                phpIndex = token.indexOf("php", phpIndex + 3, Qt::CaseInsensitive);
+            }
+
+            return QString();
+        };
+
+        const QStringList lines = output.split('\n');
+        for (const QString &line : lines)
+        {
+            if (!line.contains("php", Qt::CaseInsensitive))
+                continue;
+
+            const QStringList tokens = line.split(QRegularExpression(R"([^A-Za-z0-9._-]+)"), Qt::SkipEmptyParts);
+            for (const QString &token : tokens)
+            {
+                if (!token.contains("php", Qt::CaseInsensitive))
+                    continue;
+
+                const QString normalized = parseVersionAfterPhp(token);
+                if (!normalized.isEmpty())
+                    versions.append(normalized);
+            }
+        }
+
+        versions.removeAll(QString());
+        versions.removeDuplicates();
+        return versions;
     }
 
     QString PHPService::detectPackageManager() const

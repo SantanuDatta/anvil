@@ -7,5 +7,7 @@
     <file alias="chevron-right-dark.svg">../utils/resources/icons/chevron-right-dark.svg</file>
     <file alias="chevron-right-light.svg">../utils/resources/icons/chevron-right-light.svg</file>
     <file alias="trash.svg">../utils/resources/icons/trash.svg</file>
+    <file alias="arrow-down-tray.svg">../utils/resources/icons/arrow-down-tray.svg</file>
+    <file alias="arrow-path.svg">../utils/resources/icons/arrow-path.svg</file>
   </qresource>
 </RCC>
