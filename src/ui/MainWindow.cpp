@@ -19,6 +19,7 @@
 #include <QSize>
 #include <QPainter>
 #include <QPixmap>
+#include <QSvgRenderer>
 
 namespace Anvil::UI
 {
@@ -693,7 +694,7 @@ namespace Anvil::UI
             auto *deleteBtn = new QToolButton(actionContainer);
             deleteBtn->setAutoRaise(true);
             deleteBtn->setProperty("class", "icon-destructive");
-            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
+            deleteBtn->setIcon(themedTrashIcon());
             deleteBtn->setToolTip("Uninstall this PHP version");
             deleteBtn->setEnabled(isInstalled && !isActiveGlobalVersion);
             deleteBtn->setCursor((isInstalled && !isActiveGlobalVersion) ? Qt::PointingHandCursor : Qt::ArrowCursor);
@@ -747,7 +748,7 @@ namespace Anvil::UI
             m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
 
             auto *deleteBtn = new QToolButton();
-            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
+            deleteBtn->setIcon(themedTrashIcon());
             deleteBtn->setToolTip("Delete site");
             deleteBtn->setAutoRaise(true);
             deleteBtn->setCursor(Qt::PointingHandCursor);
@@ -935,22 +936,44 @@ namespace Anvil::UI
         const QString trashPath = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
         const QColor destructiveColor = Theme::instance().isDark() ? QColor("#7F1D1D") : QColor("#ED3D0C");
 
-        QPixmap basePixmap(trashPath);
-        if (basePixmap.isNull())
+        QSvgRenderer svgRenderer(trashPath);
+        if (!svgRenderer.isValid())
         {
             return QIcon(trashPath);
         }
 
-        QPixmap tintedPixmap(basePixmap.size());
-        tintedPixmap.fill(Qt::transparent);
+        auto makePixmap = [&svgRenderer, &destructiveColor](const QSize &size, qreal dpr)
+        {
+            if (!size.isValid())
+                return QPixmap();
 
-        QPainter painter(&tintedPixmap);
-        painter.drawPixmap(0, 0, basePixmap);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(tintedPixmap.rect(), destructiveColor);
-        painter.end();
+            QPixmap pixmap(size * dpr);
+            pixmap.setDevicePixelRatio(dpr);
+            pixmap.fill(Qt::transparent);
 
-        return QIcon(tintedPixmap);
+            QPainter painter(&pixmap);
+            svgRenderer.render(&painter, QRectF(QPointF(0, 0), QSizeF(size)));
+            painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+            painter.fillRect(QRectF(QPointF(0, 0), QSizeF(size)), destructiveColor);
+
+            return pixmap;
+        };
+
+        QIcon icon;
+        for (const QSize &size : {QSize(16, 16), QSize(18, 18), QSize(20, 20), QSize(24, 24), QSize(32, 32)})
+        {
+            for (const qreal dpr : {1.0, 2.0})
+            {
+                const QPixmap pixmap = makePixmap(size, dpr);
+                if (!pixmap.isNull())
+                    icon.addPixmap(pixmap);
+            }
+        }
+
+        if (icon.isNull())
+            return QIcon(trashPath);
+
+        return icon;
     }
 
     QString MainWindow::themedIconPath(const QString &lightPath, const QString &darkPath) const
