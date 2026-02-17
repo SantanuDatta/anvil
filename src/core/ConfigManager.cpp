@@ -42,12 +42,13 @@ namespace Anvil::Core
 
     bool ConfigManager::initialize()
     {
-        QMutexLocker locker(&m_mutex);
-
-        if (m_initialized)
         {
-            LOG_WARNING("ConfigManager already initialized");
-            return true;
+            QMutexLocker locker(&m_mutex);
+            if (m_initialized)
+            {
+                LOG_WARNING("ConfigManager already initialized");
+                return true;
+            }
         }
 
         LOG_INFO("Initializing ConfigManager");
@@ -61,17 +62,27 @@ namespace Anvil::Core
             if (!load())
             {
                 LOG_WARNING("Failed to load config, using defaults");
-                setDefaultValues();
+                {
+                    QMutexLocker locker(&m_mutex);
+                    setDefaultValues();
+                }
+                save();
             }
         }
         else
         {
             LOG_INFO("No existing config found, creating defaults");
-            setDefaultValues();
+            {
+                QMutexLocker locker(&m_mutex);
+                setDefaultValues();
+            }
             save();
         }
 
-        m_initialized = true;
+        {
+            QMutexLocker locker(&m_mutex);
+            m_initialized = true;
+        }
         LOG_INFO(QString("ConfigManager initialized at: %1").arg(m_anvilPath));
 
         return true;
