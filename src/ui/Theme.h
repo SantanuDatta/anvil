@@ -127,8 +127,8 @@ namespace Anvil::UI
             QColor cardForeground{0xF8FAFC};
             QColor popover{0x020817};
             QColor popoverForeground{0xF8FAFC};
-            QColor primary{0xF8FAFC};
-            QColor primaryForeground{0x0F172A};
+            QColor primary{0x2563EB};
+            QColor primaryForeground{0xF8FAFC};
             QColor secondary{0x1E293B};
             QColor secondaryForeground{0xF8FAFC};
             QColor muted{0x1E293B};
