@@ -1,48 +1,103 @@
 name: Tests
 
 on:
-  push:
-    branches: ["**"]
-  pull_request:
+    push:
+        branches: ['**']
+    pull_request:
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+    build-and-test:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        env:
+            BUILD_DIR: build
+            CCACHE_DIR: ~/.cache/ccache
+            CCACHE_MAXSIZE: 500M
+            CMAKE_BUILD_TYPE: Release
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            cmake \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-tools-dev \
-            qt6-tools-dev-tools \
-            libqt6svg6-dev \
-            libgl1-mesa-dev \
-            libssl-dev
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Configure
-        run: |
-          if command -v qtpaths6 >/dev/null 2>&1; then
-            QT_PREFIX=$(qtpaths6 --query QT_INSTALL_PREFIX)
-          else
-            QT_PREFIX=$(qtpaths6-qt6 --query QT_INSTALL_PREFIX)
-          fi
-          cmake -S . -B build \
-            -DENABLE_TESTING=ON \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${QT_PREFIX}" \
-            -DQt6_DIR="${QT_PREFIX}/lib/cmake/Qt6"
+            # Optional but helpful: caches apt packages between workflow runs
+            - name: Cache APT packages
+              uses: awalsh128/cache-apt-pkgs-action@v1
+              with:
+                  packages: >
+                      build-essential
+                      cmake
+                      ninja-build
+                      ccache
+                      qt6-base-dev
+                      qt6-base-dev-tools
+                      qt6-tools-dev
+                      qt6-tools-dev-tools
+                      libqt6svg6-dev
+                      libgl1-mesa-dev
+                      libssl-dev
+                  version: 1
 
-      - name: Build
-        run: |
-          cmake --build build -j$(nproc)
+            # Cache compiled objects via ccache (this is the big win)
+            - name: Cache ccache
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ccache
+                  key: >
+                      ccache-${{ runner.os }}-${{ github.repository }}-
+                      ${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', 'cmake/**', '.github/workflows/**') }}
+                  restore-keys: |
+                      ccache-${{ runner.os }}-${{ github.repository }}-
 
-      - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+            # Optional: cache the CMake build directory to avoid full re-configure and to reuse build artifacts when possible.
+            # This can be big; remove this step if your build directory is huge.
+            - name: Cache CMake build directory
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      build
+                  key: >
+                      builddir-${{ runner.os }}-${{ github.repository }}-
+                      ${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', 'cmake/**', '.github/workflows/**') }}
+                  restore-keys: |
+                      builddir-${{ runner.os }}-${{ github.repository }}-
+
+            - name: Configure (CMake + Ninja + ccache)
+              shell: bash
+              run: |
+                  set -euxo pipefail
+
+                  # Find Qt prefix on Ubuntu runner
+                  if command -v qtpaths6 >/dev/null 2>&1; then
+                    QT_PREFIX="$(qtpaths6 --query QT_INSTALL_PREFIX)"
+                  else
+                    QT_PREFIX="$(qtpaths6-qt6 --query QT_INSTALL_PREFIX)"
+                  fi
+
+                  # ccache tuning
+                  ccache --set-config=max_size="${CCACHE_MAXSIZE}" || true
+                  ccache --zero-stats || true
+
+                  cmake -S . -B "${BUILD_DIR}" -G Ninja \
+                    -DENABLE_TESTING=ON \
+                    -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+                    -DCMAKE_PREFIX_PATH="${QT_PREFIX}" \
+                    -DQt6_DIR="${QT_PREFIX}/lib/cmake/Qt6" \
+                    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+            - name: Build
+              shell: bash
+              run: |
+                  set -euxo pipefail
+                  cmake --build "${BUILD_DIR}" --parallel
+
+            - name: Run tests
+              shell: bash
+              run: |
+                  set -euxo pipefail
+                  ctest --test-dir "${BUILD_DIR}" --output-on-failure
+
+            - name: ccache stats
+              if: always()
+              run: ccache --show-stats || true
