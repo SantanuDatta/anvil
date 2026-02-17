@@ -8,15 +8,25 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS
+# ============================================================================
+# Testing option (declared early so Qt Test dependency can be conditional)
+# ============================================================================
+option(ENABLE_TESTING "Enable testing" OFF)
+
+set(ANVIL_QT_COMPONENTS
     Core
     Gui
     Widgets
     Network
     Concurrent
     DBus
-    Test
 )
+
+if(ENABLE_TESTING)
+    list(APPEND ANVIL_QT_COMPONENTS Test)
+endif()
+
+find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS ${ANVIL_QT_COMPONENTS})
 
 if(NOT QT_FOUND)
     message(FATAL_ERROR
@@ -25,15 +35,7 @@ if(NOT QT_FOUND)
     )
 endif()
 
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS
-    Core
-    Gui
-    Widgets
-    Network
-    Concurrent
-    DBus
-    Test
-)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${ANVIL_QT_COMPONENTS})
 
 message(STATUS "Using Qt${QT_VERSION_MAJOR}")
 
@@ -128,8 +130,6 @@ install(TARGETS Anvil
 # ============================================================================
 # Testing (optional)
 # ============================================================================
-option(ENABLE_TESTING "Enable testing" OFF)
-
 if(ENABLE_TESTING)
     enable_testing()
 
