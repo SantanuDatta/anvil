@@ -17,6 +17,7 @@
 #include <QToolButton>
 #include <QDialog>
 #include <QSize>
+#include <QIconEngine>
 #include <QPainter>
 #include <QPixmap>
 #include <QSvgRenderer>
@@ -26,6 +27,50 @@ namespace Anvil::UI
     namespace
     {
         const QStringList kServiceNames = {"nginx", "php", "database", "node"};
+
+        class TintedSvgIconEngine final : public QIconEngine
+        {
+        public:
+            TintedSvgIconEngine(const QString &iconPath, const QColor &color)
+                : m_baseIcon(iconPath),
+                  m_tintColor(color)
+            {
+            }
+
+            QIconEngine *clone() const override
+            {
+                return new TintedSvgIconEngine(*this);
+            }
+
+            QPixmap pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state) override
+            {
+                QPixmap basePixmap = m_baseIcon.pixmap(size, mode, state);
+                if (basePixmap.isNull())
+                {
+                    return basePixmap;
+                }
+
+                QPixmap tintedPixmap(basePixmap.size());
+                tintedPixmap.setDevicePixelRatio(basePixmap.devicePixelRatio());
+                tintedPixmap.fill(Qt::transparent);
+
+                QPainter painter(&tintedPixmap);
+                painter.drawPixmap(0, 0, basePixmap);
+                painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+                painter.fillRect(tintedPixmap.rect(), m_tintColor);
+
+                return tintedPixmap;
+            }
+
+            void paint(QPainter *painter, const QRect &rect, QIcon::Mode mode, QIcon::State state) override
+            {
+                painter->drawPixmap(rect, pixmap(rect.size(), mode, state));
+            }
+
+        private:
+            QIcon m_baseIcon;
+            QColor m_tintColor;
+        };
     }
 
     MainWindow::MainWindow(QWidget *parent)
@@ -643,6 +688,8 @@ namespace Anvil::UI
         }
 
 
+        const QIcon trashIcon = themedTrashIcon();
+
         for (int row = 0; row < availableVersions.size(); ++row)
         {
             const QString version = availableVersions.at(row);
@@ -713,6 +760,7 @@ namespace Anvil::UI
     void MainWindow::updateSitesTable()
     {
         m_sitesTable->setRowCount(0);
+        const QIcon trashIcon = themedTrashIcon();
 
         auto result = m_siteManager->listSites();
         if (result.isSuccess())
@@ -939,7 +987,7 @@ namespace Anvil::UI
         QSvgRenderer svgRenderer(trashPath);
         if (!svgRenderer.isValid())
         {
-            return QIcon(trashPath);
+            return baseIcon;
         }
 
         auto makePixmap = [&svgRenderer, &destructiveColor](const QSize &size, qreal dpr)
