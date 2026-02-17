@@ -10,6 +10,8 @@
     <file alias="trash-light.svg">../utils/resources/icons/trash-light.svg</file>
     <file alias="trash.svg">../utils/resources/icons/trash.svg</file>
     <file alias="arrow-down-tray.svg">../utils/resources/icons/arrow-down-tray.svg</file>
+    <file alias="arrow-path-dark.svg">../utils/resources/icons/arrow-path-dark.svg</file>
+    <file alias="arrow-path-light.svg">../utils/resources/icons/arrow-path-light.svg</file>
     <file alias="arrow-path.svg">../utils/resources/icons/arrow-path.svg</file>
   </qresource>
 </RCC>

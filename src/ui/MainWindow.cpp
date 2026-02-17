@@ -676,7 +676,10 @@ namespace Anvil::UI
             syncBtn->setAutoRaise(true);
             syncBtn->setCursor(isInstalled ? Qt::ArrowCursor : Qt::PointingHandCursor);
             syncBtn->setProperty("class", "icon-primary");
-            syncBtn->setIcon(QIcon(isInstalled ? ":/icons/arrow-path.svg" : ":/icons/arrow-down-tray.svg"));
+            const QString syncIcon = isInstalled
+                                         ? themedIconPath(":/icons/arrow-path-light.svg", ":/icons/arrow-path-dark.svg")
+                                         : QString(":/icons/arrow-down-tray.svg");
+            syncBtn->setIcon(QIcon(syncIcon));
             syncBtn->setToolTip(isInstalled ? "Update checks are coming soon." : "Install this PHP version");
             syncBtn->setEnabled(!isInstalled);
             syncBtn->setIconSize(QSize(18, 18));
@@ -897,9 +900,14 @@ namespace Anvil::UI
                 const auto deleteButtons = actionWidget->findChildren<QToolButton *>();
                 for (QToolButton *button : deleteButtons)
                 {
-                    if (button->property("class").toString() == "icon-destructive")
+                    const QString buttonClass = button->property("class").toString();
+                    if (buttonClass == "icon-destructive")
                     {
                         button->setIcon(QIcon(trashIcon));
+                    }
+                    else if (buttonClass == "icon-primary" && !button->isEnabled())
+                    {
+                        button->setIcon(QIcon(themedIconPath(":/icons/arrow-path-light.svg", ":/icons/arrow-path-dark.svg")));
                     }
                 }
             }
