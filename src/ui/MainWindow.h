@@ -83,44 +83,44 @@ namespace Anvil::UI
         void showError(const QString &title, const QString &message);
         void showSuccess(const QString &title, const QString &message);
 
-        QWidget *m_centralWidget;
-        QHBoxLayout *m_mainLayout;
-        QListWidget *m_sidebar;
-        QStackedWidget *m_contentStack;
+        QWidget *m_centralWidget = nullptr;
+        QHBoxLayout *m_mainLayout = nullptr;
+        QListWidget *m_sidebar = nullptr;
+        QStackedWidget *m_contentStack = nullptr;
 
-        QWidget *m_dashboardPage;
-        QWidget *m_generalPage;
-        QWidget *m_sitesPage;
-        QWidget *m_phpPage;
-        QWidget *m_nodePage;
-        QWidget *m_settingsPage;
+        QWidget *m_dashboardPage = nullptr;
+        QWidget *m_generalPage = nullptr;
+        QWidget *m_sitesPage = nullptr;
+        QWidget *m_phpPage = nullptr;
+        QWidget *m_nodePage = nullptr;
+        QWidget *m_settingsPage = nullptr;
 
-        QFrame *m_servicesCard;
-        QVBoxLayout *m_servicesLayout;
-        QPushButton *m_stopAllServicesBtn;
-        QFrame *m_phpVersionCard;
-        QComboBox *m_phpVersionCombo;
-        QLabel *m_phpVersionLabel;
+        QFrame *m_servicesCard = nullptr;
+        QVBoxLayout *m_servicesLayout = nullptr;
+        QPushButton *m_stopAllServicesBtn = nullptr;
+        QFrame *m_phpVersionCard = nullptr;
+        QComboBox *m_phpVersionCombo = nullptr;
+        QLabel *m_phpVersionLabel = nullptr;
         QMap<QString, QWidget *> m_serviceIndicators;
 
-        QTableWidget *m_sitesTable;
-        QPushButton *m_addSiteBtn;
-        QWidget *m_sitesPaginationContainer;
-        QHBoxLayout *m_sitesPaginationLayout;
-        QWidget *m_sitesPageButtonsContainer;
-        QHBoxLayout *m_sitesPageButtonsLayout;
-        QToolButton *m_sitesPrevBtn;
-        QToolButton *m_sitesNextBtn;
+        QTableWidget *m_sitesTable = nullptr;
+        QPushButton *m_addSiteBtn = nullptr;
+        QWidget *m_sitesPaginationContainer = nullptr;
+        QHBoxLayout *m_sitesPaginationLayout = nullptr;
+        QWidget *m_sitesPageButtonsContainer = nullptr;
+        QHBoxLayout *m_sitesPageButtonsLayout = nullptr;
+        QToolButton *m_sitesPrevBtn = nullptr;
+        QToolButton *m_sitesNextBtn = nullptr;
         QVector<QPushButton *> m_sitesPageButtons;
-        QListWidget *m_pathsList;
-        QPushButton *m_addPathBtn;
+        QListWidget *m_pathsList = nullptr;
+        QPushButton *m_addPathBtn = nullptr;
 
-        QTableWidget *m_phpVersionsTable;
+        QTableWidget *m_phpVersionsTable = nullptr;
         QSet<QString> m_installedPhpVersions;
-        QSpinBox *m_phpUploadSizeSpin;
-        QPushButton *m_phpUploadSizeSaveBtn;
+        QSpinBox *m_phpUploadSizeSpin = nullptr;
+        QPushButton *m_phpUploadSizeSaveBtn = nullptr;
 
-        QComboBox *m_themeCombo;
+        QComboBox *m_themeCombo = nullptr;
 
         Managers::SiteManager *m_siteManager;
         Managers::VersionManager *m_versionManager;
