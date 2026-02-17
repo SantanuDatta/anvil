@@ -1077,8 +1077,9 @@ pm.max_spare_servers = 3
         QStringList versions;
 
         const QStringList lines = output.split('\n');
-        QRegularExpression dottedRegex(R"(php(?:[\.-]?)(\d+\.\d+))", QRegularExpression::CaseInsensitiveOption);
-        QRegularExpression compactRegex(R"(php(?:[\.-]?)([5-9]\d))", QRegularExpression::CaseInsensitiveOption);
+        QRegularExpression dottedRegex(R"(\bphp(?:[\._-]?)(\d+\.\d+)(?=\D|$))", QRegularExpression::CaseInsensitiveOption);
+        // Support compact distro package naming such as php83-php-cli / php82-fpm.
+        QRegularExpression compactRegex(R"(\bphp(?:[\._-]?)([5-9]\d)(?=\D|$))", QRegularExpression::CaseInsensitiveOption);
 
         for (const QString &line : lines)
         {
