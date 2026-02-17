@@ -284,7 +284,7 @@ namespace Anvil::UI
         }
 
         QListWidget#sidebar::item:selected {
-            background-color: %5;
+            background-color: %12;
             color: %6;
             font-weight: 600;
         }
@@ -356,10 +356,10 @@ namespace Anvil::UI
         }
 
         /* Icon Buttons */
-        QToolButton.icon-primary {
+        QToolButton.icon-destructive {
             background-color: transparent;
             border: none;
-            color: %5;
+            color: %12;
             padding: 0;
         }
 

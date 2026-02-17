@@ -632,7 +632,7 @@ namespace Anvil::UI
             deleteBtn->setToolTip("Delete site");
             deleteBtn->setAutoRaise(true);
             deleteBtn->setCursor(Qt::PointingHandCursor);
-            deleteBtn->setProperty("class", "icon-primary");
+            deleteBtn->setProperty("class", "icon-destructive");
             connect(deleteBtn, &QToolButton::clicked, this, [this, row]()
                     {
                         m_sitesTable->setCurrentCell(row, 0);
