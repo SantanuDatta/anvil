@@ -17,6 +17,8 @@
 #include <QToolButton>
 #include <QDialog>
 #include <QSize>
+#include <QPainter>
+#include <QPixmap>
 
 namespace Anvil::UI
 {
@@ -888,7 +890,7 @@ namespace Anvil::UI
             m_sitesNextBtn->setIcon(QIcon(themedIconPath(":/icons/chevron-right-light.svg", ":/icons/chevron-right-dark.svg")));
         }
 
-        const QString trashIcon = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+        const QIcon trashIcon = themedTrashIcon();
 
         if (m_phpVersionsTable)
         {
@@ -904,7 +906,7 @@ namespace Anvil::UI
                     const QString buttonClass = button->property("class").toString();
                     if (buttonClass == "icon-destructive")
                     {
-                        button->setIcon(QIcon(trashIcon));
+                        button->setIcon(trashIcon);
                     }
                     else if (buttonClass == "icon-primary" && !button->isEnabled())
                     {
@@ -923,9 +925,32 @@ namespace Anvil::UI
             auto *deleteBtn = qobject_cast<QToolButton *>(cellWidget);
             if (deleteBtn)
             {
-                deleteBtn->setIcon(QIcon(trashIcon));
+                deleteBtn->setIcon(trashIcon);
             }
         }
+    }
+
+    QIcon MainWindow::themedTrashIcon() const
+    {
+        const QString trashPath = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+        const QColor destructiveColor = Theme::instance().isDark() ? QColor("#7F1D1D") : QColor("#ED3D0C");
+
+        QPixmap basePixmap(trashPath);
+        if (basePixmap.isNull())
+        {
+            return QIcon(trashPath);
+        }
+
+        QPixmap tintedPixmap(basePixmap.size());
+        tintedPixmap.fill(Qt::transparent);
+
+        QPainter painter(&tintedPixmap);
+        painter.drawPixmap(0, 0, basePixmap);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(tintedPixmap.rect(), destructiveColor);
+        painter.end();
+
+        return QIcon(tintedPixmap);
     }
 
     QString MainWindow::themedIconPath(const QString &lightPath, const QString &darkPath) const
