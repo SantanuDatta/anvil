@@ -35,9 +35,11 @@ namespace Anvil::UI
         setWindowTitle("Anvil - Laravel Development Environment");
         setMinimumSize(1200, 800);
 
-        QScreen *screen = QApplication::primaryScreen();
-        QRect screenGeometry = screen->geometry();
-        move((screenGeometry.width() - width()) / 2, (screenGeometry.height() - height()) / 2);
+        if (QScreen *screen = QApplication::primaryScreen())
+        {
+            const QRect screenGeometry = screen->geometry();
+            move((screenGeometry.width() - width()) / 2, (screenGeometry.height() - height()) / 2);
+        }
 
         if (!m_siteManager->initialize())
         {
@@ -86,6 +88,7 @@ namespace Anvil::UI
         setupNodePage();
         setupSettingsPage();
 
+        updateThemedIcons();
         setCentralWidget(m_centralWidget);
     }
 
@@ -271,8 +274,6 @@ namespace Anvil::UI
 
         m_sitesPaginationLayout->addStretch();
         layout->addWidget(m_sitesPaginationContainer);
-
-        updateThemedIcons();
 
         m_contentStack->addWidget(m_sitesPage);
     }
