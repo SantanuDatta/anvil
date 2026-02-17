@@ -21,7 +21,8 @@ if(UNIX AND NOT APPLE)
         get_filename_component(_anvil_requested_cxx_name "${_anvil_requested_cxx_bin}" NAME)
         string(TOLOWER "${_anvil_requested_cxx_name}" _anvil_requested_cxx_name_lower)
 
-        if(_anvil_requested_cxx_name_lower MATCHES "^clang-cl(\\.exe)?$")
+        # Match clang-cl and common versioned names such as clang-cl-18.
+        if(_anvil_requested_cxx_name_lower MATCHES "^clang-cl([.-][0-9]+)*(\\.exe)?$")
             find_program(_anvil_linux_fallback_cxx NAMES clang++ g++)
 
             if(_anvil_linux_fallback_cxx)
