@@ -284,7 +284,7 @@ namespace Anvil::UI
         }
 
         QListWidget#sidebar::item:selected {
-            background-color: %12;
+            background-color: %5;
             color: %6;
             font-weight: 600;
         }
