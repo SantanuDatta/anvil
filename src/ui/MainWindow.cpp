@@ -626,6 +626,7 @@ namespace Anvil::UI
         {
             const QString version = m_phpKnownVersions.at(row);
             const bool isInstalled = m_installedPhpVersions.contains(version);
+            const bool isActiveGlobalVersion = version == currentVersion;
 
             m_phpVersionsTable->insertRow(row);
 
@@ -641,6 +642,12 @@ namespace Anvil::UI
             auto *actionBtn = createButton(isInstalled ? "Uninstall" : "Install", isInstalled ? "secondary" : "primary");
             actionBtn->setMinimumWidth(108);
             actionBtn->setCursor(Qt::PointingHandCursor);
+            if (isInstalled && isActiveGlobalVersion)
+            {
+                actionBtn->setEnabled(false);
+                actionBtn->setToolTip("Active global PHP version cannot be uninstalled. Switch versions first.");
+                actionBtn->setCursor(Qt::ArrowCursor);
+            }
             actionBtn->style()->unpolish(actionBtn);
             actionBtn->style()->polish(actionBtn);
             connect(actionBtn, &QPushButton::clicked, this, [this, row]()
@@ -1088,6 +1095,16 @@ namespace Anvil::UI
 
         const QString version = m_phpKnownVersions.at(row);
         const bool installed = m_installedPhpVersions.contains(version);
+        const bool isActiveGlobalVersion = version == m_versionManager->globalPhpVersion();
+
+        if (installed && isActiveGlobalVersion)
+        {
+            showError(
+                "Cannot Uninstall Active PHP Version",
+                QString("PHP %1 is currently the active global version. Switch to another version before uninstalling.")
+                    .arg(version));
+            return;
+        }
 
         const QString action = installed ? "Uninstall" : "Install";
         QMessageBox::StandardButton reply = QMessageBox::question(
