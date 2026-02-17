@@ -31,6 +31,7 @@ namespace Anvil::Services
         ServiceResult<QList<Models::PHPVersion>> listInstalledVersions();
         ServiceResult<bool> installVersion(const QString &version);
         ServiceResult<bool> uninstallVersion(const QString &version);
+        ServiceResult<bool> updateVersion(const QString &version);
         ServiceResult<bool> switchVersion(const QString &version);
 
         // Version info

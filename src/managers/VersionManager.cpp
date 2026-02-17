@@ -274,6 +274,22 @@ namespace Anvil::Managers
         return result;
     }
 
+    Services::ServiceResult<bool> VersionManager::updatePhpVersion(const QString &version)
+    {
+        LOG_INFO(QString("Updating PHP %1").arg(version));
+        QString normalized = normalizeVersion(version);
+
+        auto *php = phpService();
+        if (!php)
+            return Services::ServiceResult<bool>::Err("PHP service not available");
+
+        auto result = php->updateVersion(normalized);
+        if (result.isSuccess())
+            LOG_INFO(QString("PHP %1 updated successfully").arg(normalized));
+
+        return result;
+    }
+
     Services::ServiceResult<bool> VersionManager::installNodeVersion(const QString &version)
     {
         LOG_INFO(QString("Installing Node.js %1").arg(version));

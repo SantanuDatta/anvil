@@ -72,6 +72,7 @@ namespace Anvil
 
             Services::ServiceResult<bool> installPhpVersion(const QString &version);
             Services::ServiceResult<bool> uninstallPhpVersion(const QString &version);
+            Services::ServiceResult<bool> updatePhpVersion(const QString &version);
 
             Services::ServiceResult<bool> installNodeVersion(const QString &version);
             Services::ServiceResult<bool> uninstallNodeVersion(const QString &version);

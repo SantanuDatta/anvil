@@ -242,6 +242,32 @@ namespace Anvil::Services
         return result;
     }
 
+    ServiceResult<bool> PHPService::updateVersion(const QString &version)
+    {
+        QString normalizedVersion = normalizeVersion(version);
+
+        LOG_INFO(QString("Updating PHP %1").arg(normalizedVersion));
+
+        if (!isVersionInstalled(normalizedVersion))
+        {
+            return ServiceResult<bool>::Err(QString("PHP %1 is not installed").arg(normalizedVersion));
+        }
+
+        auto result = installFromRepository(normalizedVersion);
+        if (result.isError())
+            return result;
+
+        scanInstalledVersions();
+
+        if (m_currentVersion == normalizedVersion)
+        {
+            configure();
+            restartFpm(normalizedVersion);
+        }
+
+        return ServiceResult<bool>::Ok(true);
+    }
+
     ServiceResult<bool> PHPService::uninstallVersion(const QString &version)
     {
         // CRITICAL FIX: Normalize input version

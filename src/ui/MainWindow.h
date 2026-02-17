@@ -52,6 +52,8 @@ namespace Anvil::UI
         void onInstallPhpVersion();
         void onAddPathClicked();
         void onPhpVersionTableAction(int row);
+        void onPhpVersionUpdateAction(int row);
+        void onPhpVersionUninstallAction(int row);
         void onSavePhpUploadSize();
 
     private:
