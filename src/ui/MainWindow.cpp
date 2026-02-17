@@ -17,9 +17,6 @@
 #include <QToolButton>
 #include <QDialog>
 #include <QSize>
-#include <QIconEngine>
-#include <QPainter>
-#include <QPixmap>
 
 namespace Anvil::UI
 {
@@ -27,49 +24,6 @@ namespace Anvil::UI
     {
         const QStringList kServiceNames = {"nginx", "php", "database", "node"};
 
-        class TintedSvgIconEngine final : public QIconEngine
-        {
-        public:
-            TintedSvgIconEngine(const QString &iconPath, const QColor &color)
-                : m_baseIcon(iconPath),
-                  m_tintColor(color)
-            {
-            }
-
-            QIconEngine *clone() const override
-            {
-                return new TintedSvgIconEngine(*this);
-            }
-
-            QPixmap pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state) override
-            {
-                QPixmap basePixmap = m_baseIcon.pixmap(size, mode, state);
-                if (basePixmap.isNull())
-                {
-                    return basePixmap;
-                }
-
-                QPixmap tintedPixmap(basePixmap.size());
-                tintedPixmap.setDevicePixelRatio(basePixmap.devicePixelRatio());
-                tintedPixmap.fill(Qt::transparent);
-
-                QPainter painter(&tintedPixmap);
-                painter.drawPixmap(0, 0, basePixmap);
-                painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-                painter.fillRect(tintedPixmap.rect(), m_tintColor);
-
-                return tintedPixmap;
-            }
-
-            void paint(QPainter *painter, const QRect &rect, QIcon::Mode mode, QIcon::State state) override
-            {
-                painter->drawPixmap(rect, pixmap(rect.size(), mode, state));
-            }
-
-        private:
-            QIcon m_baseIcon;
-            QColor m_tintColor;
-        };
     }
 
     MainWindow::MainWindow(QWidget *parent)
@@ -687,7 +641,7 @@ namespace Anvil::UI
         }
 
 
-        const QIcon trashIcon = themedTrashIcon();
+        const QIcon trashIcon(QStringLiteral(":/icons/trash.svg"));
 
         for (int row = 0; row < availableVersions.size(); ++row)
         {
@@ -759,7 +713,7 @@ namespace Anvil::UI
     void MainWindow::updateSitesTable()
     {
         m_sitesTable->setRowCount(0);
-        const QIcon trashIcon = themedTrashIcon();
+        const QIcon trashIcon(QStringLiteral(":/icons/trash.svg"));
 
         auto result = m_siteManager->listSites();
         if (result.isSuccess())
@@ -938,7 +892,7 @@ namespace Anvil::UI
             m_sitesNextBtn->setIcon(QIcon(themedIconPath(":/icons/chevron-right-light.svg", ":/icons/chevron-right-dark.svg")));
         }
 
-        const QIcon trashIcon = themedTrashIcon();
+        const QIcon trashIcon(QStringLiteral(":/icons/trash.svg"));
 
         if (m_phpVersionsTable)
         {
@@ -976,20 +930,6 @@ namespace Anvil::UI
                 deleteBtn->setIcon(trashIcon);
             }
         }
-    }
-
-    QIcon MainWindow::themedTrashIcon() const
-    {
-        const QString trashPath = ":/icons/trash.svg";
-        const QColor destructiveColor = Theme::instance().isDark() ? QColor("#7F1D1D") : QColor("#ED3D0C");
-
-        QIcon baseIcon(trashPath);
-        if (baseIcon.isNull())
-        {
-            return baseIcon;
-        }
-
-        return QIcon(new TintedSvgIconEngine(trashPath, destructiveColor));
     }
 
     QString MainWindow::themedIconPath(const QString &lightPath, const QString &darkPath) const

@@ -17,7 +17,6 @@
 #include <QVector>
 #include <QSpinBox>
 #include <QSet>
-#include <QIcon>
 
 #include "core/ServiceManager.h"
 #include "managers/SiteManager.h"
@@ -79,7 +78,6 @@ namespace Anvil::UI
         void clearSitesPaginationButtons();
         void updateParkedPaths();
         void updateThemedIcons();
-        QIcon themedTrashIcon() const;
         QString themedIconPath(const QString &lightPath, const QString &darkPath) const;
         void confirmAndRemoveSite(const QString &siteId, const QString &domain);
         void showError(const QString &title, const QString &message);
