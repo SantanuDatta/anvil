@@ -1076,28 +1076,69 @@ pm.max_spare_servers = 3
     {
         QStringList versions;
 
-        const QStringList lines = output.split('\n');
-        QRegularExpression dottedRegex(R"(\bphp(?:[\._-]?)(\d+\.\d+)(?=\D|$))", QRegularExpression::CaseInsensitiveOption);
-        // Support compact distro package naming such as php83-php-cli / php82-fpm.
-        QRegularExpression compactRegex(R"(\bphp(?:[\._-]?)([5-9]\d)(?=\D|$))", QRegularExpression::CaseInsensitiveOption);
+        // Token-oriented parsing is safer than relying on one global regex because
+        // package managers can format package names differently (php8.3, php83,
+        // libapache2-mod-php8.3, rh-php83-php-cli).
+        auto parseVersionAfterPhp = [this](const QString &token) -> QString {
+            int phpIndex = token.indexOf("php", 0, Qt::CaseInsensitive);
+            while (phpIndex != -1)
+            {
+                int cursor = phpIndex + 3;
+                while (cursor < token.size())
+                {
+                    const QChar separator = token[cursor];
+                    if (separator == '.' || separator == '-' || separator == '_')
+                    {
+                        ++cursor;
+                        continue;
+                    }
+                    break;
+                }
 
+                QString candidate;
+                while (cursor < token.size() && token[cursor].isDigit())
+                {
+                    candidate.append(token[cursor]);
+                    ++cursor;
+                }
+
+                if (cursor < token.size() && token[cursor] == '.')
+                {
+                    candidate.append('.');
+                    ++cursor;
+                    while (cursor < token.size() && token[cursor].isDigit())
+                    {
+                        candidate.append(token[cursor]);
+                        ++cursor;
+                    }
+                }
+
+                if (!candidate.isEmpty())
+                {
+                    const QString normalized = normalizeVersionToken(candidate);
+                    if (!normalized.isEmpty())
+                        return normalized;
+                }
+
+                phpIndex = token.indexOf("php", phpIndex + 3, Qt::CaseInsensitive);
+            }
+
+            return QString();
+        };
+
+        const QStringList lines = output.split('\n');
         for (const QString &line : lines)
         {
             if (!line.contains("php", Qt::CaseInsensitive))
                 continue;
 
-            auto dotted = dottedRegex.globalMatch(line);
-            while (dotted.hasNext())
+            const QStringList tokens = line.split(QRegularExpression(R"([^A-Za-z0-9._-]+)"), Qt::SkipEmptyParts);
+            for (const QString &token : tokens)
             {
-                const QString normalized = normalizeVersionToken(dotted.next().captured(1));
-                if (!normalized.isEmpty())
-                    versions.append(normalized);
-            }
+                if (!token.contains("php", Qt::CaseInsensitive))
+                    continue;
 
-            auto compact = compactRegex.globalMatch(line);
-            while (compact.hasNext())
-            {
-                const QString normalized = normalizeVersionToken(compact.next().captured(1));
+                const QString normalized = parseVersionAfterPhp(token);
                 if (!normalized.isEmpty())
                     versions.append(normalized);
             }
