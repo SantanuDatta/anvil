@@ -355,7 +355,15 @@ namespace Anvil::UI
             opacity: 0.9;
         }
 
-        /* Icon Buttons */
+        /* Icon Buttons Primary */
+        QToolButton.icon-primary {
+            background-color: transparent;
+            border: none;
+            color: %5;
+            padding: 0;
+        }
+
+        /* Icon Buttons Danger */
         QToolButton.icon-destructive {
             background-color: transparent;
             border: none;
