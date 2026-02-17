@@ -75,6 +75,19 @@ cmake --build . -j$(nproc)
 sudo cmake --install .
 ```
 
+### Linux Compiler Note (clang-cl)
+
+On Linux, do not use `clang-cl` as your C++ compiler. `clang-cl` expects Visual Studio/MSVC linker tooling and can fail during CMake compiler checks with errors like `-Wmsvc-not-found` and `posix_spawn failed`.
+
+If your shell exports `CXX=clang-cl`, unset it before configuring:
+
+```bash
+unset CXX
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+```
+
+Anvil now auto-detects this case and switches to `clang++` (or `g++`) during configure so you no longer need to wipe the entire build directory.
+
 ## Installation
 
 ### From Release Package

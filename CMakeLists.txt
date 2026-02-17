@@ -1,4 +1,45 @@
 cmake_minimum_required(VERSION 3.16)
+
+# clang-cl requires MSVC linker tooling, which is not available on Linux.
+# If a stale cache or environment variable selects clang-cl, force a Linux-safe
+# compiler so users do not need to wipe the full build directory.
+if(NOT WIN32)
+    set(_anvil_compiler_candidates)
+
+    if(DEFINED CMAKE_CXX_COMPILER)
+        list(APPEND _anvil_compiler_candidates "${CMAKE_CXX_COMPILER}")
+    endif()
+
+    if(DEFINED ENV{CXX})
+        list(APPEND _anvil_compiler_candidates "$ENV{CXX}")
+    endif()
+
+    foreach(_anvil_compiler_candidate IN LISTS _anvil_compiler_candidates)
+        get_filename_component(_anvil_compiler_name "${_anvil_compiler_candidate}" NAME)
+
+        if(_anvil_compiler_name STREQUAL "clang-cl")
+            find_program(_anvil_linux_cxx_compiler NAMES clang++ g++)
+
+            if(NOT _anvil_linux_cxx_compiler)
+                message(FATAL_ERROR
+                    "clang-cl was selected as the C++ compiler on Linux, but no suitable "
+                    "fallback compiler (clang++ or g++) was found in PATH."
+                )
+            endif()
+
+            message(WARNING
+                "Detected '${_anvil_compiler_candidate}' as C++ compiler on Linux. "
+                "clang-cl requires Visual Studio/MSVC linker tools and will fail. "
+                "Using '${_anvil_linux_cxx_compiler}' instead."
+            )
+
+            set(CMAKE_CXX_COMPILER "${_anvil_linux_cxx_compiler}" CACHE FILEPATH
+                "C++ compiler for Anvil" FORCE)
+            break()
+        endif()
+    endforeach()
+endif()
+
 project(Anvil VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
