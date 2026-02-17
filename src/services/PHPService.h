@@ -90,6 +90,10 @@ namespace Anvil::Services
         void updateSymlinks(const QString &version);
 
         // Repository detection
+        // Repository discovery helpers
+        QStringList discoverRepositoryPhpVersions() const;
+        QStringList parsePhpVersionsFromOutput(const QString &output) const;
+
         QString detectPackageManager() const;
         bool isUbuntuPpaAvailable() const;
 

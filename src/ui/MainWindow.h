@@ -115,7 +115,6 @@ namespace Anvil::UI
         QPushButton *m_addPathBtn;
 
         QTableWidget *m_phpVersionsTable;
-        QStringList m_phpKnownVersions;
         QSet<QString> m_installedPhpVersions;
         QSpinBox *m_phpUploadSizeSpin;
         QPushButton *m_phpUploadSizeSaveBtn;

@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QRegularExpression>
+#include <algorithm>
 
 namespace Anvil::Managers
 {
@@ -92,7 +93,46 @@ namespace Anvil::Managers
 
     Services::ServiceResult<QStringList> VersionManager::listAvailablePhpVersions()
     {
-        return Services::ServiceResult<QStringList>::Ok({"7.4", "8.0", "8.1", "8.2", "8.3", "8.4"});
+        QStringList versions;
+
+        auto *php = phpService();
+        if (php)
+        {
+            auto availableResult = php->listAvailableVersions();
+            if (availableResult.isSuccess())
+            {
+                for (const auto &phpVer : availableResult.data)
+                    versions.append(normalizeVersion(phpVer.shortVersion()));
+            }
+        }
+
+        auto installedResult = listInstalledPhpVersions();
+        if (installedResult.isSuccess())
+        {
+            for (const auto &phpVer : installedResult.data)
+                versions.append(normalizeVersion(phpVer.shortVersion()));
+        }
+
+        versions.removeAll(QString());
+        versions.removeDuplicates();
+
+        std::sort(versions.begin(), versions.end(), [](const QString &a, const QString &b)
+                  {
+                      const QStringList aParts = a.split('.');
+                      const QStringList bParts = b.split('.');
+                      const int aMajor = aParts.value(0).toInt();
+                      const int bMajor = bParts.value(0).toInt();
+                      if (aMajor != bMajor)
+                          return aMajor > bMajor;
+
+                      const int aMinor = aParts.value(1).toInt();
+                      const int bMinor = bParts.value(1).toInt();
+                      return aMinor > bMinor;
+                  });
+
+        return versions.isEmpty()
+                   ? Services::ServiceResult<QStringList>::Err("No available PHP versions found")
+                   : Services::ServiceResult<QStringList>::Ok(versions);
     }
 
     Services::ServiceResult<bool> VersionManager::switchGlobalNodeVersion(const QString &version)

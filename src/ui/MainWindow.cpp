@@ -160,7 +160,7 @@ namespace Anvil::UI
         phpHeader->addWidget(m_phpVersionCombo);
         phpLayout->addLayout(phpHeader);
 
-        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden. <a href=\"php-tab\">Check PHP versions</a>");
+        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden. <a href=\"php-tab\" style=\"color: #2563eb; text-decoration: none; font-weight: 600;\">Check PHP versions</a>");
         phpDesc->setProperty("class", "muted");
         phpDesc->setTextFormat(Qt::RichText);
         phpDesc->setTextInteractionFlags(Qt::TextBrowserInteraction);
@@ -285,13 +285,9 @@ namespace Anvil::UI
         layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
-        QLabel *title = new QLabel("PHP");
+        QLabel *title = new QLabel("PHP Verisons");
         title->setProperty("class", "heading");
         layout->addWidget(title);
-
-        QLabel *versionsTitle = new QLabel("Versions");
-        versionsTitle->setProperty("class", "subheading");
-        layout->addWidget(versionsTitle);
 
         m_phpVersionsTable = new QTableWidget(0, 3);
         m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Installed", "Action"});
@@ -306,8 +302,10 @@ namespace Anvil::UI
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
+        m_phpVersionsTable->horizontalHeaderItem(0)->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         m_phpVersionsTable->setColumnWidth(2, 140);
-        layout->addWidget(m_phpVersionsTable);
+        m_phpVersionsTable->setMinimumHeight(360);
+        layout->addWidget(m_phpVersionsTable, 1);
 
         QFrame *uploadCard = createCard();
         QVBoxLayout *uploadLayout = qobject_cast<QVBoxLayout *>(uploadCard->layout());
@@ -331,9 +329,6 @@ namespace Anvil::UI
         uploadLayout->addLayout(uploadRow);
         layout->addWidget(uploadCard);
 
-        m_phpKnownVersions = {"8.4", "8.3", "8.2", "8.1", "8.0", "7.4"};
-
-        layout->addStretch();
         m_contentStack->addWidget(m_phpPage);
     }
 
@@ -607,9 +602,21 @@ namespace Anvil::UI
             m_phpVersionCombo->addItem("No PHP versions installed");
         }
 
-        for (int row = 0; row < m_phpKnownVersions.size(); ++row)
+        QStringList availableVersions;
+        auto availableResult = m_versionManager->listAvailablePhpVersions();
+        if (availableResult.isSuccess())
         {
-            const QString version = m_phpKnownVersions.at(row);
+            availableVersions = availableResult.data;
+        }
+
+        if (availableVersions.isEmpty())
+        {
+            availableVersions = QStringList(m_installedPhpVersions.begin(), m_installedPhpVersions.end());
+        }
+
+        for (int row = 0; row < availableVersions.size(); ++row)
+        {
+            const QString version = availableVersions.at(row);
             const bool isInstalled = m_installedPhpVersions.contains(version);
             const bool isActiveGlobalVersion = version == currentVersion;
 
@@ -1082,10 +1089,14 @@ namespace Anvil::UI
 
     void MainWindow::onPhpVersionTableAction(int row)
     {
-        if (row < 0 || row >= m_phpKnownVersions.size())
+        if (row < 0 || row >= m_phpVersionsTable->rowCount())
             return;
 
-        const QString version = m_phpKnownVersions.at(row);
+        QTableWidgetItem *versionItem = m_phpVersionsTable->item(row, 0);
+        if (!versionItem)
+            return;
+
+        const QString version = versionItem->data(Qt::UserRole).toString();
         const bool installed = m_installedPhpVersions.contains(version);
         const bool isActiveGlobalVersion = version == m_versionManager->globalPhpVersion();
 
