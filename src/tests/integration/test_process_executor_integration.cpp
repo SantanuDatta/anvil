@@ -1,5 +1,7 @@
 #include <QtTest/QtTest>
 #include <QFileInfo>
+#include <QFile>
+#include <QTemporaryDir>
 
 #include "utils/Process.h"
 
@@ -14,6 +16,7 @@ private slots:
     void resolvesExecutablePathWithoutShellingOut();
     void supportsEnvironmentValuesContainingEqualsSigns();
     void resolvesExecutablePathWhenPathIsEmpty();
+    void resolvesExecutablePathFromInjectedPathEnvironment();
 };
 
 void ProcessExecutorIntegrationTest::executesCommand()
@@ -47,6 +50,34 @@ void ProcessExecutorIntegrationTest::supportsEnvironmentValuesContainingEqualsSi
 
     QVERIFY(result.isSuccess());
     QCOMPARE(result.output.trimmed(), QString("alpha=beta=gamma"));
+}
+
+void ProcessExecutorIntegrationTest::resolvesExecutablePathFromInjectedPathEnvironment()
+{
+    QTemporaryDir tempDir;
+    QVERIFY2(tempDir.isValid(), "Failed to create temporary directory");
+
+    const QString toolPath = tempDir.filePath("anvil-test-tool");
+    QFile toolFile(toolPath);
+    QVERIFY2(toolFile.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create temporary executable");
+    toolFile.write("#!/bin/sh\necho anvil\n");
+    toolFile.close();
+
+    const QFileDevice::Permissions permissions = QFileDevice::ReadOwner |
+                                                 QFileDevice::WriteOwner |
+                                                 QFileDevice::ExeOwner |
+                                                 QFileDevice::ReadGroup |
+                                                 QFileDevice::ExeGroup |
+                                                 QFileDevice::ReadOther |
+                                                 QFileDevice::ExeOther;
+    QVERIFY2(toolFile.setPermissions(permissions), "Failed to mark temporary executable as runnable");
+
+    ProcessExecutor executor;
+    executor.setEnvironment({QString("PATH=%1").arg(tempDir.path())});
+
+    const QString resolvedPath = executor.programPath("anvil-test-tool");
+
+    QCOMPARE(resolvedPath, QFileInfo(toolPath).canonicalFilePath());
 }
 
 void ProcessExecutorIntegrationTest::resolvesExecutablePathWhenPathIsEmpty()

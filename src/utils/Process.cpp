@@ -139,7 +139,8 @@ namespace Anvil::Utils
         }
 
         QStringList searchPaths;
-        const QString pathEnv = qEnvironmentVariable("PATH");
+        const QProcessEnvironment env = buildProcessEnvironment();
+        const QString pathEnv = env.value("PATH", qEnvironmentVariable("PATH"));
         if (!pathEnv.isEmpty())
         {
             searchPaths = pathEnv.split(':', Qt::SkipEmptyParts);
@@ -161,8 +162,7 @@ namespace Anvil::Utils
             }
         }
 
-        const QString discoveredPath = QStandardPaths::findExecutable(program, searchPaths);
-        return discoveredPath;
+        return QStandardPaths::findExecutable(program, searchPaths);
     }
 
     bool ProcessExecutor::killProcess(qint64 pid, bool force)
@@ -190,7 +190,11 @@ namespace Anvil::Utils
     void ProcessExecutor::setupProcess(const QString &workingDir)
     {
         m_process->setWorkingDirectory(workingDir.isEmpty() ? QDir::currentPath() : workingDir);
+        m_process->setProcessEnvironment(buildProcessEnvironment());
+    }
 
+    QProcessEnvironment ProcessExecutor::buildProcessEnvironment() const
+    {
         QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
         for (const QString &envVar : m_environment)
         {
@@ -203,7 +207,7 @@ namespace Anvil::Utils
             }
         }
 
-        m_process->setProcessEnvironment(env);
+        return env;
     }
 
     QString ProcessExecutor::escapeShellArgument(const QString &arg) const

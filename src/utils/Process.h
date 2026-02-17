@@ -89,6 +89,7 @@ namespace Anvil::Utils
         QString m_stderrBuffer;
 
         void setupProcess(const QString &workingDir);
+        QProcessEnvironment buildProcessEnvironment() const;
         QString escapeShellArgument(const QString &arg) const;
     };
 
