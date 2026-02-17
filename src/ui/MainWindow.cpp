@@ -22,7 +22,7 @@ namespace Anvil::UI
 {
     namespace
     {
-        const QStringList kServiceNames = {"nginx", "php", "mysql", "node"};
+        const QStringList kServiceNames = {"nginx", "php", "database", "node"};
     }
 
     MainWindow::MainWindow(QWidget *parent)
@@ -418,7 +418,13 @@ namespace Anvil::UI
         dot->setFixedWidth(20);
         layout->addWidget(dot);
 
-        QLabel *nameLabel = new QLabel(serviceName);
+        QString displayName = serviceName;
+        if (serviceName == "database")
+            displayName = "Database";
+        else
+            displayName = serviceName.toUpper();
+
+        QLabel *nameLabel = new QLabel(displayName);
         nameLabel->setObjectName("status_name_" + serviceName);
         layout->addWidget(nameLabel);
         layout->addStretch();
@@ -506,7 +512,7 @@ namespace Anvil::UI
                 auto *php = manager->phpService();
                 isRunning = php && php->isRunning();
             }
-            else if (serviceName == "mysql")
+            else if (serviceName == "database")
             {
                 auto *db = manager->databaseService();
                 isRunning = db && db->isRunning();
@@ -522,6 +528,7 @@ namespace Anvil::UI
             allStopped = allStopped && !isRunning;
 
             QLabel *dot = indicator->findChild<QLabel *>("status_dot_" + serviceName);
+            QLabel *name = indicator->findChild<QLabel *>("status_name_" + serviceName);
             QLabel *text = indicator->findChild<QLabel *>("status_text_" + serviceName);
 
             if (dot)
@@ -529,6 +536,20 @@ namespace Anvil::UI
                 dot->setProperty("class", isRunning ? "status-running" : "status-stopped");
                 dot->style()->unpolish(dot);
                 dot->style()->polish(dot);
+            }
+
+            if (name)
+            {
+                if (serviceName == "database")
+                {
+                    auto *db = manager->databaseService();
+                    const QString dbName = db ? db->databaseTypeString() : QString("Database");
+                    name->setText(dbName == "Unknown" ? "Database" : dbName);
+                }
+                else
+                {
+                    name->setText(serviceName.toUpper());
+                }
             }
 
             if (text)
