@@ -131,7 +131,7 @@ namespace Anvil::Utils
         }
 
         const QFileInfo programInfo(program);
-        if (programInfo.isAbsolutePath())
+        if (programInfo.isAbsolute())
         {
             return (programInfo.exists() && programInfo.isExecutable())
                        ? programInfo.canonicalFilePath()
