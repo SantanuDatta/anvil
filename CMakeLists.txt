@@ -1,4 +1,49 @@
 cmake_minimum_required(VERSION 3.16)
+
+# Guard Linux builds from selecting clang-cl (MSVC frontend), which does not
+# work with the default Linux toolchain/runtime expectations.
+if(UNIX AND NOT APPLE)
+    set(_anvil_requested_cxx "")
+    set(_anvil_requested_cxx_source "")
+
+    # Respect explicit -DCMAKE_CXX_COMPILER selection over the CXX env var.
+    if(DEFINED CMAKE_CXX_COMPILER AND NOT CMAKE_CXX_COMPILER STREQUAL "")
+        set(_anvil_requested_cxx "${CMAKE_CXX_COMPILER}")
+        set(_anvil_requested_cxx_source "CMAKE_CXX_COMPILER")
+    elseif(DEFINED ENV{CXX} AND NOT "$ENV{CXX}" STREQUAL "")
+        set(_anvil_requested_cxx "$ENV{CXX}")
+        set(_anvil_requested_cxx_source "CXX environment variable")
+    endif()
+
+    if(NOT _anvil_requested_cxx STREQUAL "")
+        separate_arguments(_anvil_requested_cxx_parts NATIVE_COMMAND "${_anvil_requested_cxx}")
+        list(GET _anvil_requested_cxx_parts 0 _anvil_requested_cxx_bin)
+        get_filename_component(_anvil_requested_cxx_name "${_anvil_requested_cxx_bin}" NAME)
+        string(TOLOWER "${_anvil_requested_cxx_name}" _anvil_requested_cxx_name_lower)
+
+        # Match clang-cl and common versioned names such as clang-cl-18.
+        if(_anvil_requested_cxx_name_lower MATCHES "^clang-cl([.-][0-9]+)*(\\.exe)?$")
+            find_program(_anvil_linux_fallback_cxx NAMES clang++ g++)
+
+            if(_anvil_linux_fallback_cxx)
+                set(CMAKE_CXX_COMPILER "${_anvil_linux_fallback_cxx}" CACHE FILEPATH
+                    "Linux fallback C++ compiler when clang-cl is selected" FORCE)
+                message(WARNING
+                    "clang-cl was selected via ${_anvil_requested_cxx_source} on Linux. "
+                    "clang-cl targets MSVC-style environments and fails in standard Linux builds. "
+                    "Using '${_anvil_linux_fallback_cxx}' instead."
+                )
+            else()
+                message(FATAL_ERROR
+                    "clang-cl was selected via ${_anvil_requested_cxx_source} on Linux, but no "
+                    "fallback compiler was found. Install clang++ or g++, or set "
+                    "-DCMAKE_CXX_COMPILER to a Linux-compatible compiler."
+                )
+            endif()
+        endif()
+    endif()
+endif()
+
 project(Anvil VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
