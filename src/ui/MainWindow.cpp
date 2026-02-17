@@ -160,8 +160,16 @@ namespace Anvil::UI
         phpHeader->addWidget(m_phpVersionCombo);
         phpLayout->addLayout(phpHeader);
 
-        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden");
+        QLabel *phpDesc = new QLabel("This version will be used for all sites unless overridden. <a href=\"php-tab\">Check PHP versions</a>");
         phpDesc->setProperty("class", "muted");
+        phpDesc->setTextFormat(Qt::RichText);
+        phpDesc->setTextInteractionFlags(Qt::TextBrowserInteraction);
+        phpDesc->setOpenExternalLinks(false);
+        connect(phpDesc, &QLabel::linkActivated, this, [this](const QString &)
+                {
+                    m_sidebar->setCurrentRow(3);
+                    m_contentStack->setCurrentWidget(m_phpPage);
+                });
         phpLayout->addWidget(phpDesc);
 
         layout->addWidget(m_phpVersionCard);
@@ -281,12 +289,9 @@ namespace Anvil::UI
         title->setProperty("class", "heading");
         layout->addWidget(title);
 
-        QFrame *versionsCard = createCard();
-        QVBoxLayout *versionsLayout = qobject_cast<QVBoxLayout *>(versionsCard->layout());
-
         QLabel *versionsTitle = new QLabel("Versions");
         versionsTitle->setProperty("class", "subheading");
-        versionsLayout->addWidget(versionsTitle);
+        layout->addWidget(versionsTitle);
 
         m_phpVersionsTable = new QTableWidget(0, 3);
         m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Installed", "Action"});
@@ -302,24 +307,7 @@ namespace Anvil::UI
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
         m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed);
         m_phpVersionsTable->setColumnWidth(2, 140);
-        versionsLayout->addWidget(m_phpVersionsTable);
-        layout->addWidget(versionsCard);
-
-        QFrame *switchCard = createCard();
-        QVBoxLayout *switchLayout = qobject_cast<QVBoxLayout *>(switchCard->layout());
-        QLabel *switchTitle = new QLabel("Current Version");
-        switchTitle->setProperty("class", "subheading");
-        switchLayout->addWidget(switchTitle);
-        m_phpCurrentVersion = new QLabel("Loading...");
-        switchLayout->addWidget(m_phpCurrentVersion);
-
-        QHBoxLayout *switchRow = new QHBoxLayout();
-        m_phpSwitchCombo = new QComboBox();
-        switchRow->addWidget(m_phpSwitchCombo);
-        m_switchPhpBtn = createButton("Set as Global", "secondary");
-        switchRow->addWidget(m_switchPhpBtn);
-        switchLayout->addLayout(switchRow);
-        layout->addWidget(switchCard);
+        layout->addWidget(m_phpVersionsTable);
 
         QFrame *uploadCard = createCard();
         QVBoxLayout *uploadLayout = qobject_cast<QVBoxLayout *>(uploadCard->layout());
@@ -475,7 +463,6 @@ namespace Anvil::UI
                     updateSitesTable();
                 });
         connect(m_themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onThemeModeChanged);
-        connect(m_switchPhpBtn, &QPushButton::clicked, this, &MainWindow::onSwitchPhpVersion);
         connect(m_phpUploadSizeSaveBtn, &QPushButton::clicked, this, &MainWindow::onSavePhpUploadSize);
         connect(m_addPathBtn, &QPushButton::clicked, this, &MainWindow::onAddPathClicked);
         connect(m_siteManager, &Managers::SiteManager::siteCreated, this, &MainWindow::onSiteCreated);
@@ -494,8 +481,6 @@ namespace Anvil::UI
         Core::ConfigManager &config = Core::ConfigManager::instance();
         m_phpUploadSizeSpin->setValue(config.maxUploadSize());
 
-        QString currentPhp = m_versionManager->globalPhpVersion();
-        m_phpCurrentVersion->setText(QString("PHP %1").arg(currentPhp));
     }
 
     void MainWindow::updateServiceIndicators()
@@ -591,7 +576,6 @@ namespace Anvil::UI
     void MainWindow::updatePhpVersionCombo()
     {
         m_phpVersionCombo->clear();
-        m_phpSwitchCombo->clear();
         m_phpVersionsTable->setRowCount(0);
         m_installedPhpVersions.clear();
 
@@ -602,16 +586,18 @@ namespace Anvil::UI
         {
             for (const auto &phpVer : result.data)
             {
-                m_installedPhpVersions.insert(phpVer.version());
+                const QString shortVersion = phpVer.shortVersion();
+                m_installedPhpVersions.insert(shortVersion);
+                const QString fullVersion = phpVer.fullVersion();
+                const QString display = (fullVersion.isEmpty() || fullVersion == shortVersion)
+                                            ? QString("PHP %1").arg(shortVersion)
+                                            : QString("PHP %1 (%2)").arg(shortVersion, fullVersion);
 
-                QString display = QString("PHP %1").arg(phpVer.version());
-                m_phpVersionCombo->addItem(display, phpVer.version());
-                m_phpSwitchCombo->addItem(display, phpVer.version());
+                m_phpVersionCombo->addItem(display, shortVersion);
 
-                if (phpVer.version() == currentVersion)
+                if (shortVersion == currentVersion)
                 {
                     m_phpVersionCombo->setCurrentIndex(m_phpVersionCombo->count() - 1);
-                    m_phpSwitchCombo->setCurrentIndex(m_phpSwitchCombo->count() - 1);
                 }
             }
         }
@@ -619,7 +605,6 @@ namespace Anvil::UI
         if (m_phpVersionCombo->count() == 0)
         {
             m_phpVersionCombo->addItem("No PHP versions installed");
-            m_phpSwitchCombo->addItem("No PHP versions installed");
         }
 
         for (int row = 0; row < m_phpKnownVersions.size(); ++row)
@@ -630,7 +615,17 @@ namespace Anvil::UI
 
             m_phpVersionsTable->insertRow(row);
 
-            auto *versionItem = new QTableWidgetItem(version);
+            QString displayVersion = version;
+            for (const auto &phpVer : result.data)
+            {
+                if (phpVer.shortVersion() == version && phpVer.fullVersion() != version)
+                {
+                    displayVersion = QString("%1 (%2)").arg(version, phpVer.fullVersion());
+                    break;
+                }
+            }
+
+            auto *versionItem = new QTableWidgetItem(displayVersion);
             versionItem->setData(Qt::UserRole, version);
             versionItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
             m_phpVersionsTable->setItem(row, 0, versionItem);
@@ -655,7 +650,6 @@ namespace Anvil::UI
             m_phpVersionsTable->setCellWidget(row, 2, actionBtn);
         }
 
-        m_phpCurrentVersion->setText(currentVersion.isEmpty() ? "No active PHP version" : QString("PHP %1").arg(currentVersion));
     }
 
     void MainWindow::updateSitesTable()
@@ -969,7 +963,6 @@ namespace Anvil::UI
         if (result.isSuccess())
         {
             showSuccess("PHP Version Changed", QString("Global PHP version changed to %1\nPHP-FPM has been restarted.").arg(versionNum));
-            m_phpCurrentVersion->setText(QString("PHP %1").arg(versionNum));
             LOG_INFO(QString("PHP version switched to: %1").arg(versionNum));
         }
         else
@@ -1001,7 +994,6 @@ namespace Anvil::UI
     {
         LOG_INFO(QString("Global PHP version changed to: %1").arg(version));
         updatePhpVersionCombo();
-        m_phpCurrentVersion->setText(QString("PHP %1").arg(version));
     }
 
     void MainWindow::onThemeChanged()
@@ -1144,22 +1136,6 @@ namespace Anvil::UI
         showSuccess("PHP Settings Saved", QString("Max upload size set to %1 MB").arg(m_phpUploadSizeSpin->value()));
     }
 
-    void MainWindow::onSwitchPhpVersion()
-    {
-        QString versionNum = m_phpSwitchCombo->currentData().toString();
-        if (versionNum.isEmpty() || versionNum == m_versionManager->globalPhpVersion())
-            return;
-        auto result = m_versionManager->switchGlobalPhpVersion(versionNum);
-        if (result.isSuccess())
-        {
-            showSuccess("PHP Version Switched", QString("Now using PHP %1").arg(versionNum));
-            m_phpCurrentVersion->setText(QString("PHP %1").arg(versionNum));
-        }
-        else
-        {
-            showError("Error", QString("Failed to switch PHP:\n%1").arg(result.error));
-        }
-    }
     void MainWindow::closeEvent(QCloseEvent *event)
     {
         if (m_siteManager)

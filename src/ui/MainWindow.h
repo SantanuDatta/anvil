@@ -50,7 +50,6 @@ namespace Anvil::UI
         void onRemoveSiteClicked();
         void onThemeModeChanged(int index);
         void onInstallPhpVersion();
-        void onSwitchPhpVersion();
         void onAddPathClicked();
         void onPhpVersionTableAction(int row);
         void onSavePhpUploadSize();
@@ -115,12 +114,9 @@ namespace Anvil::UI
         QListWidget *m_pathsList;
         QPushButton *m_addPathBtn;
 
-        QLabel *m_phpCurrentVersion;
         QTableWidget *m_phpVersionsTable;
         QStringList m_phpKnownVersions;
         QSet<QString> m_installedPhpVersions;
-        QComboBox *m_phpSwitchCombo;
-        QPushButton *m_switchPhpBtn;
         QSpinBox *m_phpUploadSizeSpin;
         QPushButton *m_phpUploadSizeSaveBtn;
 
