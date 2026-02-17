@@ -202,7 +202,6 @@ namespace Anvil::UI
         pathsHeader->addWidget(pathsTitle);
         pathsHeader->addStretch();
 
-        Core::ConfigManager &config = Core::ConfigManager::instance();
         m_pathsList = new QListWidget();
         m_pathsList->setSelectionMode(QAbstractItemView::NoSelection);
         pathsLayout->addWidget(m_pathsList);

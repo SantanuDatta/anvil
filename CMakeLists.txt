@@ -8,15 +8,36 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS
+# ============================================================================
+# Testing option (declared early so Qt Test dependency can be conditional)
+# ============================================================================
+option(ENABLE_TESTING "Enable testing" OFF)
+
+set(ANVIL_QT_COMPONENTS
     Core
     Gui
     Widgets
     Network
     Concurrent
     DBus
-    Test
 )
+
+if(ENABLE_TESTING)
+    list(APPEND ANVIL_QT_COMPONENTS Test)
+endif()
+
+find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS ${ANVIL_QT_COMPONENTS})
+
+if(NOT QT_FOUND)
+    message(FATAL_ERROR
+        "Qt development packages were not found. Install Qt6 (preferred) or Qt5, "
+        "or set CMAKE_PREFIX_PATH/Qt6_DIR/Qt5_DIR to your Qt CMake package path."
+    )
+endif()
+
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${ANVIL_QT_COMPONENTS})
+
+message(STATUS "Using Qt${QT_VERSION_MAJOR}")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -57,9 +78,9 @@ add_library(anvil_backend STATIC
 )
 
 target_link_libraries(anvil_backend PUBLIC
-    Qt6::Core
-    Qt6::Network
-    Qt6::Concurrent
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Concurrent
 )
 
 target_include_directories(anvil_backend PUBLIC
@@ -79,12 +100,12 @@ add_library(anvil_ui STATIC
 
 target_link_libraries(anvil_ui PUBLIC
     anvil_backend
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Network
-    Qt6::Concurrent
-    Qt6::DBus
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Gui
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Concurrent
+    Qt${QT_VERSION_MAJOR}::DBus
 )
 
 target_include_directories(anvil_ui PUBLIC
@@ -109,33 +130,31 @@ install(TARGETS Anvil
 # ============================================================================
 # Testing (optional)
 # ============================================================================
-option(ENABLE_TESTING "Enable testing" OFF)
-
 if(ENABLE_TESTING)
     enable_testing()
 
     add_executable(test_php_version
         src/tests/unit/test_php_version.cpp
     )
-    target_link_libraries(test_php_version PRIVATE anvil_backend Qt6::Test)
+    target_link_libraries(test_php_version PRIVATE anvil_backend Qt${QT_VERSION_MAJOR}::Test)
     add_test(NAME PHPVersionUnitTest COMMAND test_php_version)
 
     add_executable(test_site
         src/tests/unit/test_site.cpp
     )
-    target_link_libraries(test_site PRIVATE anvil_backend Qt6::Test)
+    target_link_libraries(test_site PRIVATE anvil_backend Qt${QT_VERSION_MAJOR}::Test)
     add_test(NAME SiteUnitTest COMMAND test_site)
 
     add_executable(test_filesystem_integration
         src/tests/integration/test_filesystem_integration.cpp
     )
-    target_link_libraries(test_filesystem_integration PRIVATE anvil_backend Qt6::Test)
+    target_link_libraries(test_filesystem_integration PRIVATE anvil_backend Qt${QT_VERSION_MAJOR}::Test)
     add_test(NAME FileSystemIntegrationTest COMMAND test_filesystem_integration)
 
     add_executable(test_process_executor_integration
         src/tests/integration/test_process_executor_integration.cpp
     )
-    target_link_libraries(test_process_executor_integration PRIVATE anvil_backend Qt6::Test)
+    target_link_libraries(test_process_executor_integration PRIVATE anvil_backend Qt${QT_VERSION_MAJOR}::Test)
     add_test(NAME ProcessExecutorIntegrationTest COMMAND test_process_executor_integration)
 
     message(STATUS "")

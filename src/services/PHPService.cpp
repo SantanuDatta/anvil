@@ -973,7 +973,7 @@ pm.max_spare_servers = 3
 
         if (m_packageManager == "apt")
         {
-            auto searchResult = executeAndCapture("apt-cache", {"search", "^php[0-9]+\.[0-9]+"});
+            auto searchResult = executeAndCapture("apt-cache", {"search", "^php[0-9]+\\.[0-9]+"});
             if (searchResult.isSuccess())
                 versions.append(parsePhpVersionsFromOutput(searchResult.data));
         }
