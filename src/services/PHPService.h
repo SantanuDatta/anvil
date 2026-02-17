@@ -92,7 +92,9 @@ namespace Anvil::Services
         // Repository detection
         // Repository discovery helpers
         QStringList discoverRepositoryPhpVersions() const;
+        QStringList discoverInstalledPhpVersions() const;
         QStringList parsePhpVersionsFromOutput(const QString &output) const;
+        QString normalizeVersionToken(const QString &token) const;
 
         QString detectPackageManager() const;
         bool isUbuntuPpaAvailable() const;
