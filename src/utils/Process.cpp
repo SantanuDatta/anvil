@@ -125,7 +125,44 @@ namespace Anvil::Utils
 
     QString ProcessExecutor::programPath(const QString &program)
     {
-        return QStandardPaths::findExecutable(program);
+        if (program.isEmpty())
+        {
+            return QString();
+        }
+
+        const QFileInfo programInfo(program);
+        if (programInfo.isAbsolutePath())
+        {
+            return (programInfo.exists() && programInfo.isExecutable())
+                       ? programInfo.canonicalFilePath()
+                       : QString();
+        }
+
+        QStringList searchPaths;
+        const QString pathEnv = qEnvironmentVariable("PATH");
+        if (!pathEnv.isEmpty())
+        {
+            searchPaths = pathEnv.split(':', Qt::SkipEmptyParts);
+        }
+
+        const QStringList fallbackPaths = {
+            "/usr/local/sbin",
+            "/usr/local/bin",
+            "/usr/sbin",
+            "/usr/bin",
+            "/sbin",
+            "/bin"};
+
+        for (const QString &path : fallbackPaths)
+        {
+            if (!searchPaths.contains(path))
+            {
+                searchPaths.append(path);
+            }
+        }
+
+        const QString discoveredPath = QStandardPaths::findExecutable(program, searchPaths);
+        return discoveredPath;
     }
 
     bool ProcessExecutor::killProcess(qint64 pid, bool force)

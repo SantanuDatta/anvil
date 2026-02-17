@@ -13,6 +13,7 @@ private slots:
     void executesCommand();
     void resolvesExecutablePathWithoutShellingOut();
     void supportsEnvironmentValuesContainingEqualsSigns();
+    void resolvesExecutablePathWhenPathIsEmpty();
 };
 
 void ProcessExecutorIntegrationTest::executesCommand()
@@ -46,6 +47,28 @@ void ProcessExecutorIntegrationTest::supportsEnvironmentValuesContainingEqualsSi
 
     QVERIFY(result.isSuccess());
     QCOMPARE(result.output.trimmed(), QString("alpha=beta=gamma"));
+}
+
+void ProcessExecutorIntegrationTest::resolvesExecutablePathWhenPathIsEmpty()
+{
+    ProcessExecutor executor;
+
+    const QByteArray originalPath = qgetenv("PATH");
+    qputenv("PATH", QByteArray());
+
+    const QString path = executor.programPath("sh");
+
+    if (originalPath.isEmpty())
+    {
+        qunsetenv("PATH");
+    }
+    else
+    {
+        qputenv("PATH", originalPath);
+    }
+
+    QVERIFY2(!path.isEmpty(), "Expected fallback path resolution for 'sh' even when PATH is empty");
+    QVERIFY2(QFileInfo::exists(path), "Fallback-resolved executable path should exist");
 }
 
 QTEST_MAIN(ProcessExecutorIntegrationTest)
