@@ -277,48 +277,67 @@ namespace Anvil::UI
         layout->setContentsMargins(24, 24, 24, 24);
         layout->setSpacing(24);
 
-        QLabel *title = new QLabel("PHP Versions");
+        QLabel *title = new QLabel("PHP");
         title->setProperty("class", "heading");
         layout->addWidget(title);
 
-        QFrame *currentCard = createCard();
-        QVBoxLayout *currentLayout = qobject_cast<QVBoxLayout *>(currentCard->layout());
-        QLabel *currentTitle = new QLabel("Current Version");
-        currentTitle->setProperty("class", "subheading");
-        currentLayout->addWidget(currentTitle);
-        m_phpCurrentVersion = new QLabel("Loading...");
-        currentLayout->addWidget(m_phpCurrentVersion);
-        layout->addWidget(currentCard);
+        QFrame *versionsCard = createCard();
+        QVBoxLayout *versionsLayout = qobject_cast<QVBoxLayout *>(versionsCard->layout());
 
-        QFrame *installCard = createCard();
-        QVBoxLayout *installLayout = qobject_cast<QVBoxLayout *>(installCard->layout());
-        QLabel *installTitle = new QLabel("Install PHP Version");
-        installTitle->setProperty("class", "subheading");
-        installLayout->addWidget(installTitle);
+        QLabel *versionsTitle = new QLabel("Versions");
+        versionsTitle->setProperty("class", "subheading");
+        versionsLayout->addWidget(versionsTitle);
 
-        QHBoxLayout *installRow = new QHBoxLayout();
-        m_phpInstallCombo = new QComboBox();
-        m_phpInstallCombo->addItems({"8.4", "8.3", "8.2", "8.1", "8.0", "7.4"});
-        m_phpInstallCombo->setCurrentIndex(1);
-        installRow->addWidget(m_phpInstallCombo);
-        m_installPhpBtn = createButton("Install", "primary");
-        installRow->addWidget(m_installPhpBtn);
-        installLayout->addLayout(installRow);
-        layout->addWidget(installCard);
+        m_phpVersionsTable = new QTableWidget(0, 3);
+        m_phpVersionsTable->setHorizontalHeaderLabels({"Version", "Installed", "Action"});
+        m_phpVersionsTable->verticalHeader()->setVisible(false);
+        m_phpVersionsTable->setSelectionMode(QAbstractItemView::NoSelection);
+        m_phpVersionsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+        m_phpVersionsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+        versionsLayout->addWidget(m_phpVersionsTable);
+        layout->addWidget(versionsCard);
 
         QFrame *switchCard = createCard();
         QVBoxLayout *switchLayout = qobject_cast<QVBoxLayout *>(switchCard->layout());
-        QLabel *switchTitle = new QLabel("Switch Version");
+        QLabel *switchTitle = new QLabel("Current Version");
         switchTitle->setProperty("class", "subheading");
         switchLayout->addWidget(switchTitle);
+        m_phpCurrentVersion = new QLabel("Loading...");
+        switchLayout->addWidget(m_phpCurrentVersion);
 
         QHBoxLayout *switchRow = new QHBoxLayout();
         m_phpSwitchCombo = new QComboBox();
         switchRow->addWidget(m_phpSwitchCombo);
-        m_switchPhpBtn = createButton("Switch", "secondary");
+        m_switchPhpBtn = createButton("Set as Global", "secondary");
         switchRow->addWidget(m_switchPhpBtn);
         switchLayout->addLayout(switchRow);
         layout->addWidget(switchCard);
+
+        QFrame *uploadCard = createCard();
+        QVBoxLayout *uploadLayout = qobject_cast<QVBoxLayout *>(uploadCard->layout());
+        QLabel *uploadTitle = new QLabel("Max File Upload Size");
+        uploadTitle->setProperty("class", "subheading");
+        uploadLayout->addWidget(uploadTitle);
+
+        QLabel *uploadDesc = new QLabel("Configure the maximum file size that PHP will accept as file uploads (in MB).");
+        uploadDesc->setProperty("class", "muted");
+        uploadDesc->setWordWrap(true);
+        uploadLayout->addWidget(uploadDesc);
+
+        QHBoxLayout *uploadRow = new QHBoxLayout();
+        m_phpUploadSizeSpin = new QSpinBox();
+        m_phpUploadSizeSpin->setRange(1, 4096);
+        m_phpUploadSizeSpin->setSuffix(" MB");
+        uploadRow->addWidget(m_phpUploadSizeSpin);
+        uploadRow->addStretch();
+        m_phpUploadSizeSaveBtn = createButton("Save", "primary");
+        uploadRow->addWidget(m_phpUploadSizeSaveBtn);
+        uploadLayout->addLayout(uploadRow);
+        layout->addWidget(uploadCard);
+
+        m_phpKnownVersions = {"8.4", "8.3", "8.2", "8.1", "8.0", "7.4"};
 
         layout->addStretch();
         m_contentStack->addWidget(m_phpPage);
@@ -450,8 +469,8 @@ namespace Anvil::UI
                     updateSitesTable();
                 });
         connect(m_themeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onThemeModeChanged);
-        connect(m_installPhpBtn, &QPushButton::clicked, this, &MainWindow::onInstallPhpVersion);
         connect(m_switchPhpBtn, &QPushButton::clicked, this, &MainWindow::onSwitchPhpVersion);
+        connect(m_phpUploadSizeSaveBtn, &QPushButton::clicked, this, &MainWindow::onSavePhpUploadSize);
         connect(m_addPathBtn, &QPushButton::clicked, this, &MainWindow::onAddPathClicked);
         connect(m_siteManager, &Managers::SiteManager::siteCreated, this, &MainWindow::onSiteCreated);
         connect(m_siteManager, &Managers::SiteManager::siteRemoved, this, &MainWindow::onSiteRemoved);
@@ -465,6 +484,9 @@ namespace Anvil::UI
         updatePhpVersionCombo();
         updateSitesTable();
         updateParkedPaths();
+
+        Core::ConfigManager &config = Core::ConfigManager::instance();
+        m_phpUploadSizeSpin->setValue(config.maxUploadSize());
 
         QString currentPhp = m_versionManager->globalPhpVersion();
         m_phpCurrentVersion->setText(QString("PHP %1").arg(currentPhp));
@@ -564,14 +586,18 @@ namespace Anvil::UI
     {
         m_phpVersionCombo->clear();
         m_phpSwitchCombo->clear();
+        m_phpVersionsTable->setRowCount(0);
+        m_installedPhpVersions.clear();
 
         auto result = m_versionManager->listInstalledPhpVersions();
-        if (result.isSuccess() && !result.data.isEmpty())
-        {
-            QString currentVersion = m_versionManager->globalPhpVersion();
+        QString currentVersion = m_versionManager->globalPhpVersion();
 
+        if (result.isSuccess())
+        {
             for (const auto &phpVer : result.data)
             {
+                m_installedPhpVersions.insert(phpVer.version());
+
                 QString display = QString("PHP %1").arg(phpVer.version());
                 m_phpVersionCombo->addItem(display, phpVer.version());
                 m_phpSwitchCombo->addItem(display, phpVer.version());
@@ -583,11 +609,35 @@ namespace Anvil::UI
                 }
             }
         }
-        else
+
+        if (m_phpVersionCombo->count() == 0)
         {
             m_phpVersionCombo->addItem("No PHP versions installed");
             m_phpSwitchCombo->addItem("No PHP versions installed");
         }
+
+        for (int row = 0; row < m_phpKnownVersions.size(); ++row)
+        {
+            const QString version = m_phpKnownVersions.at(row);
+            const bool isInstalled = m_installedPhpVersions.contains(version);
+
+            m_phpVersionsTable->insertRow(row);
+
+            auto *versionItem = new QTableWidgetItem(version);
+            versionItem->setData(Qt::UserRole, version);
+            m_phpVersionsTable->setItem(row, 0, versionItem);
+
+            auto *installedItem = new QTableWidgetItem(isInstalled ? QString::fromUtf8("✓") : "");
+            installedItem->setTextAlignment(Qt::AlignCenter);
+            m_phpVersionsTable->setItem(row, 1, installedItem);
+
+            auto *actionBtn = createButton(isInstalled ? "Uninstall" : "Install", isInstalled ? "secondary" : "primary");
+            connect(actionBtn, &QPushButton::clicked, this, [this, row]()
+                    { onPhpVersionTableAction(row); });
+            m_phpVersionsTable->setCellWidget(row, 2, actionBtn);
+        }
+
+        m_phpCurrentVersion->setText(currentVersion.isEmpty() ? "No active PHP version" : QString("PHP %1").arg(currentVersion));
     }
 
     void MainWindow::updateSitesTable()
@@ -1014,29 +1064,58 @@ namespace Anvil::UI
 
     void MainWindow::onInstallPhpVersion()
     {
-        QString version = m_phpInstallCombo->currentText();
+        int row = m_phpVersionsTable->currentRow();
+        if (row < 0)
+            row = 0;
+        onPhpVersionTableAction(row);
+    }
 
+    void MainWindow::onPhpVersionTableAction(int row)
+    {
+        if (row < 0 || row >= m_phpKnownVersions.size())
+            return;
+
+        const QString version = m_phpKnownVersions.at(row);
+        const bool installed = m_installedPhpVersions.contains(version);
+
+        const QString action = installed ? "Uninstall" : "Install";
         QMessageBox::StandardButton reply = QMessageBox::question(
-            this, "Install PHP",
-            QString("Install PHP %1? This may take several minutes.").arg(version),
+            this,
+            QString("%1 PHP").arg(action),
+            QString("%1 PHP %2?").arg(action, version),
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply != QMessageBox::Yes)
             return;
 
-        LOG_INFO(QString("Installing PHP %1").arg(version));
-        auto result = m_versionManager->installPhpVersion(version);
+        auto result = installed
+                          ? m_versionManager->uninstallPhpVersion(version)
+                          : m_versionManager->installPhpVersion(version);
 
         if (result.isSuccess())
         {
-            showSuccess("PHP Installed", QString("PHP %1 installed successfully").arg(version));
+            showSuccess(
+                installed ? "PHP Uninstalled" : "PHP Installed",
+                installed ? QString("PHP %1 uninstalled successfully").arg(version)
+                          : QString("PHP %1 installed successfully").arg(version));
             updatePhpVersionCombo();
         }
         else
         {
-            showError("Error", QString("Failed to install PHP:\n%1").arg(result.error));
+            showError(
+                "Error",
+                QString("Failed to %1 PHP %2:\n%3")
+                    .arg(installed ? "uninstall" : "install", version, result.error));
         }
     }
+
+    void MainWindow::onSavePhpUploadSize()
+    {
+        Core::ConfigManager &config = Core::ConfigManager::instance();
+        config.setMaxUploadSize(m_phpUploadSizeSpin->value());
+        showSuccess("PHP Settings Saved", QString("Max upload size set to %1 MB").arg(m_phpUploadSizeSpin->value()));
+    }
+
     void MainWindow::onSwitchPhpVersion()
     {
         QString versionNum = m_phpSwitchCombo->currentData().toString();
