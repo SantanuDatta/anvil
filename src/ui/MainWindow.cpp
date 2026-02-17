@@ -607,11 +607,16 @@ namespace Anvil::UI
         {
             availableVersions = availableResult.data;
         }
+        else
+        {
+            LOG_WARNING(QString("Failed to query available PHP versions: %1").arg(availableResult.error));
+        }
 
         if (availableVersions.isEmpty())
         {
             availableVersions = QStringList(m_installedPhpVersions.begin(), m_installedPhpVersions.end());
         }
+
 
         for (int row = 0; row < availableVersions.size(); ++row)
         {

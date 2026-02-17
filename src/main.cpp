@@ -1044,6 +1044,18 @@ int main(int argc, char *argv[])
 
     LOG_INFO("Anvil - Laravel Herd for Linux");
 
+    auto &config = Core::ConfigManager::instance();
+    if (!config.isInitialized() && !config.initialize())
+    {
+        LOG_ERROR("Failed to initialize configuration");
+    }
+
+    auto *serviceManager = Core::ServiceManager::instance();
+    if (!serviceManager || (!serviceManager->isInitialized() && !serviceManager->initialize()))
+    {
+        LOG_ERROR("Failed to initialize services");
+    }
+
     Anvil::UI::MainWindow window;
     window.show();
 
