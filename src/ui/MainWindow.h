@@ -15,6 +15,8 @@
 #include <QLineEdit>
 #include <QToolButton>
 #include <QVector>
+#include <QSpinBox>
+#include <QSet>
 
 #include "core/ServiceManager.h"
 #include "managers/SiteManager.h"
@@ -50,6 +52,8 @@ namespace Anvil::UI
         void onInstallPhpVersion();
         void onSwitchPhpVersion();
         void onAddPathClicked();
+        void onPhpVersionTableAction(int row);
+        void onSavePhpUploadSize();
 
     private:
         void setupUi();
@@ -112,10 +116,13 @@ namespace Anvil::UI
         QPushButton *m_addPathBtn;
 
         QLabel *m_phpCurrentVersion;
-        QComboBox *m_phpInstallCombo;
-        QPushButton *m_installPhpBtn;
+        QTableWidget *m_phpVersionsTable;
+        QStringList m_phpKnownVersions;
+        QSet<QString> m_installedPhpVersions;
         QComboBox *m_phpSwitchCombo;
         QPushButton *m_switchPhpBtn;
+        QSpinBox *m_phpUploadSizeSpin;
+        QPushButton *m_phpUploadSizeSaveBtn;
 
         QComboBox *m_themeCombo;
 
