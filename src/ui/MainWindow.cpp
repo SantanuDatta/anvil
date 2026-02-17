@@ -687,7 +687,7 @@ namespace Anvil::UI
             auto *deleteBtn = new QToolButton(actionContainer);
             deleteBtn->setAutoRaise(true);
             deleteBtn->setProperty("class", "icon-destructive");
-            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
+            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
             deleteBtn->setToolTip("Uninstall this PHP version");
             deleteBtn->setEnabled(isInstalled && !isActiveGlobalVersion);
             deleteBtn->setCursor((isInstalled && !isActiveGlobalVersion) ? Qt::PointingHandCursor : Qt::ArrowCursor);
@@ -741,7 +741,7 @@ namespace Anvil::UI
             m_sitesTable->setItem(row, 3, new QTableWidgetItem(site.phpVersion()));
 
             auto *deleteBtn = new QToolButton();
-            deleteBtn->setIcon(QIcon(":/icons/trash.svg"));
+            deleteBtn->setIcon(QIcon(themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg")));
             deleteBtn->setToolTip("Delete site");
             deleteBtn->setAutoRaise(true);
             deleteBtn->setCursor(Qt::PointingHandCursor);
@@ -884,10 +884,30 @@ namespace Anvil::UI
             m_sitesNextBtn->setIcon(QIcon(themedIconPath(":/icons/chevron-right-light.svg", ":/icons/chevron-right-dark.svg")));
         }
 
+        const QString trashIcon = themedIconPath(":/icons/trash-light.svg", ":/icons/trash-dark.svg");
+
+        if (m_phpVersionsTable)
+        {
+            for (int row = 0; row < m_phpVersionsTable->rowCount(); ++row)
+            {
+                QWidget *actionWidget = m_phpVersionsTable->cellWidget(row, 2);
+                if (!actionWidget)
+                    continue;
+
+                const auto deleteButtons = actionWidget->findChildren<QToolButton *>();
+                for (QToolButton *button : deleteButtons)
+                {
+                    if (button->property("class").toString() == "icon-destructive")
+                    {
+                        button->setIcon(QIcon(trashIcon));
+                    }
+                }
+            }
+        }
+
         if (!m_sitesTable)
             return;
 
-        const QString trashIcon = ":/icons/trash.svg";
         for (int row = 0; row < m_sitesTable->rowCount(); ++row)
         {
             QWidget *cellWidget = m_sitesTable->cellWidget(row, 4);
