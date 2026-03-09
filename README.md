@@ -2,7 +2,7 @@
 
 <div align="center">
 
-A memory-efficient, robust PHP development environment manager for Linux - inspired by Laravel Herd.
+A memory-efficient, robust PHP development environment manager for Linux.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Qt Version](https://img.shields.io/badge/Qt-6.x-green.svg)](https://www.qt.io/)
